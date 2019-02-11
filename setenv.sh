@@ -1,0 +1,1 @@
+export MOBILITY_GENERATOR=$(pwd)
