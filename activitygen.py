@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 
 """ SUMO Activity-Based Mobility Generator
-    Copyright (C) 2019
-    EURECOM - Lara CODECA 
+
+    Copyright (c) 2019 Lara CODECA - EURECOM
+
+    This program and the accompanying materials are made available under the
+    terms of the Eclipse Public License 2.0 which is available at
+    http://www.eclipse.org/legal/epl-2.0.
 """
 
 import argparse
@@ -993,22 +997,13 @@ class MobilityGenerator(object):
     ROUTES_TPL = """<?xml version="1.0" encoding="UTF-8"?>
 
 <!--
-    Monaco SUMO Traffic (MoST) Scenario
-    Copyright (C) 2018
-    Lara CODECA
+    SUMO Activity-Based Mobility Generator
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+    Copyright (c) 2019 Lara CODECA - EURECOM
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    This program and the accompanying materials are made available under the
+    terms of the Eclipse Public License 2.0 which is available at
+    http://www.eclipse.org/legal/epl-2.0.
 -->
 
 <routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd"> {trips}
