@@ -476,9 +476,12 @@ class MobilityGenerator(object):
                         modes=_mode, pType=_ptype, vType=_vtype)
                     if not self._is_valid_route(mode, route):
                         route = None
-                    ## Add stop
-                    if route and stage.duration:
-                        route.append(self._generate_waiting_stage(stage))
+                    if route:
+                        ## Set the arrival position in the edge
+                        route[-1] = route[-1]._replace(arrivalPos=stage.arrivalPos)
+                        ## Add stop
+                        if stage.duration:
+                            route.append(self._generate_waiting_stage(stage))
 
                 if not route:
                     raise TripGenerationError(
@@ -537,10 +540,14 @@ class MobilityGenerator(object):
         while not route:
             ## Origin and Destination Selection
             from_edge, to_edge = self._select_pair(from_area, to_area)
-            from_allowed = (self._sumo_network.getEdge(from_edge).allows('pedestrian') and
-                            self._sumo_network.getEdge(from_edge).allows('passenger'))
-            to_allowed = (self._sumo_network.getEdge(to_edge).allows('pedestrian') and
-                          self._sumo_network.getEdge(to_edge).allows('passenger'))
+            from_allowed = (
+                self._sumo_network.getEdge(from_edge).allows('pedestrian') and
+                self._sumo_network.getEdge(from_edge).allows('passenger') and
+                self._sumo_network.getEdge(from_edge).getLength() > self._conf['minEdgeAllowed'])
+            to_allowed = (
+                self._sumo_network.getEdge(to_edge).allows('pedestrian') and
+                self._sumo_network.getEdge(to_edge).allows('passenger') and
+                self._sumo_network.getEdge(to_edge).getLength() > self._conf['minEdgeAllowed'])
             if self._valid_pair(from_edge, to_edge) and from_allowed and to_allowed:
                 try:
                     route = traci.simulation.findIntermodalRoute(
@@ -619,13 +626,15 @@ class MobilityGenerator(object):
     def _get_random_pos_from_edge(self, edge):
         """ Return a random position in the given edge. """
         length = self._sumo_network.getEdge(edge).getLength()
-        if length < 30.0:
-            return length/2.0
+        position = None
+        if length < self._conf['stopBufferDistance']:
+            position = length/2.0
 
         # avoid the proximity of the intersection
-        begin = length + 10.0
-        end = length - 10.0
-        return self._random_generator.random_sample() * (end - begin) + begin
+        begin = self._conf['stopBufferDistance'] / 2.0
+        end = length - begin
+        position = (end - begin) * self._random_generator.random_sample() + begin
+        return position
 
     def _stages_define_locations_position(self, person_stages):
         """ Define the position of each location in the activity chain. """
@@ -731,18 +740,23 @@ class MobilityGenerator(object):
             raise TripGenerationError('No edges from {} with range {}.'.format(center, length))
 
         ret = self._random_generator.choice(edges)
-        allowed = (self._sumo_network.getEdge(ret).allows('pedestrian') and
-                   self._sumo_network.getEdge(ret).allows('passenger'))
-        while edges and (ret == center or ret == other) and not allowed:
+        allowed = (
+            self._sumo_network.getEdge(ret).allows('pedestrian') and
+            self._sumo_network.getEdge(ret).allows('passenger') and
+            ret != center and ret != other and
+            self._sumo_network.getEdge(ret).getLength() > self._conf['minEdgeAllowed'])
+        while edges and not allowed:
             edges.remove(ret)
             ret = self._random_generator.choice(edges)
-            allowed = (self._sumo_network.getEdge(ret).allows('pedestrian') and
-                       self._sumo_network.getEdge(ret).allows('passenger'))
+            allowed = (
+                self._sumo_network.getEdge(ret).allows('pedestrian') and
+                self._sumo_network.getEdge(ret).allows('passenger') and
+                ret != center and ret != other and
+                self._sumo_network.getEdge(ret).getLength() > self._conf['minEdgeAllowed'])
 
         if not edges:
             raise TripGenerationError(
                 'No valid edges from {} with range {}.'.format(center, length))
-
         return ret
 
     def _random_location_ellipse(self, focus1, focus2):
@@ -764,8 +778,10 @@ class MobilityGenerator(object):
             edges.remove(edge)
             if edge == focus1 or edge == focus2:
                 continue
-            allowed = (self._sumo_network.getEdge(edge).allows('pedestrian') and
-                       self._sumo_network.getEdge(edge).allows('passenger'))
+            allowed = (
+                self._sumo_network.getEdge(edge).allows('pedestrian') and
+                self._sumo_network.getEdge(edge).allows('passenger') and
+                self._sumo_network.getEdge(edge).getLength() > self._conf['minEdgeAllowed'])
             if not allowed:
                 continue
             try:
@@ -1053,7 +1069,7 @@ class MobilityGenerator(object):
         <stop parkingArea="{id}" triggered="true" expected="{person}"/>"""
 
     STOP_EDGE_TRIGGERED = """
-        <stop lane="{lane}" parking="true" triggered="true" expected="{person}"/>"""
+        <stop lane="{lane}" parking="true" startPos="{start}" endPos="{end}" triggered="true" expected="{person}"/>"""
 
     ONDEMAND_TRIGGERED = """
         <stop lane="{lane}" parking="true" startPos="{start}" endPos="{end}" duration="1.0"/>"""
@@ -1084,7 +1100,11 @@ class MobilityGenerator(object):
         <ride from="{from_edge}" to="{to_edge}" arrivalPos="{arrival}" lines="{vehicle_id}"/>"""
 
     VEHICLE_TRIGGERED = """
-    <vehicle id="{id}" type="{v_type}" depart="triggered" departPos="{depart}" arrivalPos="{arrival}">{route}{stops}
+    <vehicle id="{id}" type="{v_type}" depart="triggered">{route}{stops}
+    </vehicle>"""
+
+    VEHICLE_TRIGGERED_DEPART = """
+    <vehicle id="{id}" type="{v_type}" depart="triggered" departPos="{depart}">{route}{stops}
     </vehicle>"""
 
     def _get_stopping_lane(self, edge):
@@ -1104,6 +1124,7 @@ class MobilityGenerator(object):
         _triggered_route = []
         _triggered_stops = ''
         stages = ''
+        _last_arrival_pos = None
         for stage in person['stages']:
             if stage.stageType == tc.STAGE_WAITING:
                 stages += self.WAIT.format(lane=stage.edges,
@@ -1117,6 +1138,7 @@ class MobilityGenerator(object):
                     if stage.arrivalPos:
                         stages += self.WALK_W_ARRIVAL.format(
                             edges=' '.join(stage.edges), arrival=stage.arrivalPos)
+                        _last_arrival_pos = stage.arrivalPos
                     else:
                         stages += self.WALK.format(edges=' '.join(stage.edges))
             elif stage.stageType == tc.STAGE_DRIVING:
@@ -1135,16 +1157,19 @@ class MobilityGenerator(object):
                         _route = self.ROUTE.format(edges=' '.join(stage.edges))
                         _vtype = stage.vType
                         _stop = ''
-                        if stage.travelTime == 1.0:
-                            _stop = self.FINAL_STOP.format(
-                                lane=self._get_stopping_lane(stage.edges[-1]))
+                        start = stage.arrivalPos - self._conf['stopBufferDistance'] / 2.0
+                        end = stage.arrivalPos + self._conf['stopBufferDistance'] / 2.0
+                        _stop = self.ONDEMAND_TRIGGERED.format(
+                            lane=self._get_stopping_lane(stage.edges[-1]),
+                            start=start, end=end)
+                        if _last_arrival_pos:
+                            triggered += self.VEHICLE_TRIGGERED_DEPART.format(
+                                id=_ride_id, v_type=_vtype, route=_route, stops=_stop,
+                                depart=_last_arrival_pos)
                         else:
-                            _stop = self.ONDEMAND_TRIGGERED.format(
-                                lane=self._get_stopping_lane(stage.edges[-1]),
-                                start='TEST', end='TEST')
-                        triggered += self.VEHICLE_TRIGGERED.format(
-                            id=_ride_id, v_type=_vtype, route=_route,
-                            stops=_stop, arrival='TEST', depart='TEST')
+                            triggered += self.VEHICLE_TRIGGERED.format(
+                                id=_ride_id, v_type=_vtype, route=_route, stops=_stop)
+                        _last_arrival_pos = stage.arrivalPos
                     else:
                         ## add to the existing one
                         _ride_id = _tr_id
@@ -1172,21 +1197,23 @@ class MobilityGenerator(object):
                                     id=stage.destStop, person=person['id'])
                             else:
                                 # print('side edge')
+                                start = stage.arrivalPos - self._conf['stopBufferDistance'] / 2.0
+                                end = stage.arrivalPos + self._conf['stopBufferDistance'] / 2.0
                                 _stop = self.STOP_EDGE_TRIGGERED.format(
                                     lane=self._get_stopping_lane(stage.edges[-1]),
-                                    person=person['id'])
+                                    person=person['id'], start=start, end=end)
                         _triggered_stops += _stop
 
                     stages += self.RIDE_TRIGGERED.format(
                         from_edge=stage.edges[0], to_edge=stage.edges[-1], vehicle_id=_ride_id,
-                        arrival='TEST')
+                        arrival=stage.arrivalPos)
 
         ## fixing the personal triggered vehicles
         if _triggered_route:
             _route = self.ROUTE.format(edges=' '.join(_triggered_route))
             triggered += self.VEHICLE_TRIGGERED.format(
                 id=_tr_id, v_type=_triggered_vtype, route=_route,
-                stops=_triggered_stops, arrival='TEST', depart='TEST')
+                stops=_triggered_stops, arrival='random', depart='random')
 
         ## result
         complete_trip += triggered

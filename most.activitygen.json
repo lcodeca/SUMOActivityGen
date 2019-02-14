@@ -22,7 +22,7 @@
     },
 
     "population": {
-        "entities" : 100,
+        "entities" : 10000,
         "tazDefinition": "MoSTScenario/tools/mobility/taz/most.complete.taz.xml",
         "tazWeights": "MoSTScenario/tools/mobility/taz/most.complete.taz.weight.csv",
         "buildingsWeight": "MoSTScenario/tools/mobility/taz/buildings/",
@@ -129,5 +129,8 @@
                 [0.2, ["Home", "S-L", "P-A", "Home" ], ["on-demand"]]
             ]
         }
-    }
+    },
+
+    "minEdgeAllowed": 30.0,
+    "stopBufferDistance": 20.0
 }
