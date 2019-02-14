@@ -61,8 +61,7 @@ def _args():
     parser = argparse.ArgumentParser(
         prog='{}'.format(sys.argv[0]),
         usage='%(prog)s -c configuration.json',
-        description='Generate trips based on a symplified acrtivity-based '
-                    'mobility generation based on PoIs and TAZ.')
+        description='SUMO Activity-Based Mobility Generator')
     parser.add_argument(
         '-c', type=str, dest='config', required=True,
         help='JSON configuration file.')
@@ -75,18 +74,20 @@ def _load_configurations(filename):
     """
     return json.loads(open(filename).read())
 
-## This is for SUMO API compatibility
+## For SUMO API compatibility
 Stage = collections.namedtuple(
     'Stage',
     ['stageType', 'vType', 'line', 'destStop', 'edges', 'travelTime', 'cost', 'length', 'intended',
      'depart', 'departPos', 'arrivalPos', 'description'],
     defaults=('',) * 13)
 
-class Error(Exception):
-    """Base class for exceptions in this module."""
-    pass
+## Activity
+Activity = collections.namedtuple(
+    'Activity',
+    ['activity', 'fromEdge', 'toEdge', 'arrivalPos', 'start', 'duration'],
+    defaults=(None,) * 6)
 
-class TripGenerationError(Error):
+class TripGenerationError(Exception):
     """ During the step by step generation of the trip, it is possible to reach a state in which
         some of the chosen locations are impossible to reach in that order.
     """
@@ -306,7 +307,7 @@ class MobilityGenerator(object):
                             _chain, _modes)
 
                         ## Generating departure time
-                        _depart = numpy.round(_final_chain[1]['start'], decimals=2)
+                        _depart = numpy.round(_final_chain[1].start, decimals=2)
                         if _depart not in self._all_trips[name].keys():
                             self._all_trips[name][_depart] = []
 
@@ -340,7 +341,7 @@ class MobilityGenerator(object):
                         complete_trip = self._generate_sumo_trip_from_activitygen(_person_trip)
                         _person_trip['string'] = complete_trip
 
-                    except Error:
+                    except TripGenerationError:
                         _person_trip = None
                         _error_counter += 1
                         if _error_counter % 10 == 0:
@@ -431,19 +432,19 @@ class MobilityGenerator(object):
                 #                     departPos=0.0, arrivalPos=-1073741824, departPosLat=0.0,
                 #                     pType='', vType='', destStop='')
                 if not _new_start_time:
-                    _new_start_time = stage['start']
+                    _new_start_time = stage.start
 
                 route = None
 
                 ## If the vtype is among the one that require parking, and we are not going home,
                 #  look for a parking and build the additional walk back and forth.
-                if (stage['activity'] != 'Home' and
+                if (stage.activity != 'Home' and
                         _vtype in self._conf['intermodalOptions']['vehicleAllowedParking']):
                     ## find parking
-                    p_id, p_edge, _last_mile = self._find_closest_parking(stage['to'])
+                    p_id, p_edge, _last_mile = self._find_closest_parking(stage.toEdge)
                     if _last_mile:
                         route = traci.simulation.findIntermodalRoute(
-                            stage['from'], p_edge, depart=_new_start_time, walkFactor=.9,
+                            stage.fromEdge, p_edge, depart=_new_start_time, walkFactor=.9,
                             modes=_mode, pType=_ptype, vType=_vtype)
 
                         if (self._is_valid_route(mode, route) and
@@ -455,33 +456,33 @@ class MobilityGenerator(object):
                             route = None
                     if route:
                         ## build the waiting to destination (if required)
-                        if stage['duration']:
+                        if stage.duration:
                             wait = self._generate_waiting_stage(stage)
                             route.append(wait)
 
                         ## build the walk back to the parking
                         walk_back = traci.simulation.findIntermodalRoute(
-                            stage['to'], p_edge, walkFactor=.9, pType="pedestrian")
+                            stage.toEdge, p_edge, walkFactor=.9, pType="pedestrian")
                         walk_back = walk_back[0]._replace(arrivalPos=self._parking_position[p_id])
                         route.append(walk_back)
 
                         ## update the next stage to make it start from the parking
                         if pos + 1 in person_stages:
-                            person_stages[pos+1]['from'] = p_edge
+                            person_stages[pos+1] = person_stages[pos+1]._replace(fromEdge=p_edge)
                 else:
                     ## PUBLIC, ON-DEMAND, trip to HOME, and NO-PARKING required vehicles.
                     route = traci.simulation.findIntermodalRoute(
-                        stage['from'], stage['to'], depart=_new_start_time, walkFactor=.9,
+                        stage.fromEdge, stage.toEdge, depart=_new_start_time, walkFactor=.9,
                         modes=_mode, pType=_ptype, vType=_vtype)
                     if not self._is_valid_route(mode, route):
                         route = None
                     ## Add stop
-                    if route and stage['duration']:
+                    if route and stage.duration:
                         route.append(self._generate_waiting_stage(stage))
 
                 if not route:
                     raise TripGenerationError(
-                        'Route not found between {} and {}.'.format(stage['from'], stage['to']))
+                        'Route not found between {} and {}.'.format(stage.fromEdge, stage.toEdge))
 
                 ## Add the stage to the full planned trip.
                 for step in route:
@@ -518,19 +519,18 @@ class MobilityGenerator(object):
     def _generate_waiting_stage(stage):
         """ Builds a STAGE_WAITING type of stage compatible with findIntermodalRoute. """
         wait = Stage(
-            stageType=tc.STAGE_WAITING, description=stage['activity'],
-            edges='{}_0'.format(stage['to']), travelTime=stage['duration'],
-            cost=stage['duration'])
+            stageType=tc.STAGE_WAITING, description=stage.activity,
+            edges='{}_0'.format(stage.toEdge), travelTime=stage.duration,
+            cost=stage.duration)
         return wait
 
-    def _generate_person_stages(self, from_area, to_area, activity_chain, mode):
-        """ Returns the trip for the given activity chain. """
-
+    def _stages_define_main_locations(self, from_area, to_area, mode):
+        """ Define a generic Home and Primary activity location.
+            The locations must be reachable in some ways.
+        """
         ## Mode split:
         _mode, _ptype, _vtype = self._get_mode_parameters(mode)
 
-        # Define a generic Home and Primary activity location.
-        # The locations must be reachable in some ways.
         route = None
         from_edge = None
         to_edge = None
@@ -552,6 +552,107 @@ class MobilityGenerator(object):
                     route = None
             else:
                 logging.debug('_generate_person_stages: unusable pair of edges.')
+        return from_edge, to_edge
+
+    def _stages_define_secondary_locations(self, person_stages, home, primary):
+        """ Define secondary activity locations. """
+        for pos, stage in person_stages.items():
+            if  'S-' in stage.activity:
+                ## look for what is coming before
+                _prec = None
+                _pos = pos - 1
+                while not _prec and _pos in person_stages:
+                    if 'Home' in person_stages[_pos].activity:
+                        _prec = 'H'
+                    elif 'P-' in person_stages[_pos].activity:
+                        _prec = 'P'
+                    _pos -= 1
+
+                ## look for what is coming next
+                _succ = None
+                _pos = pos + 1
+                while not _succ and _pos in person_stages:
+                    if 'Home' in person_stages[_pos].activity:
+                        _succ = 'H'
+                    elif 'P-' in person_stages[_pos].activity:
+                        _succ = 'P'
+                    _pos += 1
+
+                destination = None
+                if _prec == 'H' and _succ == 'H':
+                    destination = self._random_location_circle(center=home, other=primary)
+                elif _prec == 'P' and _succ == 'P':
+                    destination = self._random_location_circle(center=primary, other=home)
+                elif _prec != _succ:
+                    destination = self._random_location_ellipse(home, primary)
+                else:
+                    raise TripGenerationError(
+                        'Invalid sequence in the activity chain: {} --> {}'.format(_prec, _succ))
+
+                person_stages[pos] = stage._replace(toEdge=destination)
+        return person_stages
+
+    def _stages_compute_start_time(self, person_stages):
+        """ Compute the real starting time for the activity chain. """
+        # Find the first 'start' defined.
+        pos = 1
+        while pos in person_stages:
+            if person_stages[pos].start:
+                break
+            pos += 1
+
+        start = person_stages[pos].start
+        while pos in person_stages:
+            ett = 1800.0    # generic standard value
+            try:
+                ett = traci.simulation.findRoute(
+                    person_stages[pos].fromEdge, person_stages[pos].toEdge).travelTime
+            except traci.exceptions.TraCIException:
+                pass
+            if pos-1 in person_stages:
+                if person_stages[pos-1].duration:
+                    ett += person_stages[pos-1].duration
+            start -= ett
+            pos -= 1
+        return start
+
+    def _get_random_pos_from_edge(self, edge):
+        """ Return a random position in the given edge. """
+        length = self._sumo_network.getEdge(edge).getLength()
+        if length < 30.0:
+            return length/2.0
+
+        # avoid the proximity of the intersection
+        begin = length + 10.0
+        end = length - 10.0
+        return self._random_generator.random_sample() * (end - begin) + begin
+
+    def _stages_define_locations_position(self, person_stages):
+        """ Define the position of each location in the activity chain. """
+        home_pos = None
+        primary_pos = None
+
+        for pos, stage in person_stages.items():
+            if 'Home' in stage.activity:
+                if not home_pos:
+                    home_pos = self._get_random_pos_from_edge(stage.toEdge)
+                person_stages[pos] = stage._replace(arrivalPos=home_pos)
+            elif 'P-' in stage.activity:
+                if not primary_pos:
+                    primary_pos = self._get_random_pos_from_edge(stage.toEdge)
+                person_stages[pos] = stage._replace(arrivalPos=primary_pos)
+            else:
+                ## Secondary activities
+                person_stages[pos] = stage._replace(
+                    arrivalPos=self._get_random_pos_from_edge(stage.toEdge))
+
+        return person_stages
+
+    def _generate_person_stages(self, from_area, to_area, activity_chain, mode):
+        """ Returns the trip for the given activity chain. """
+
+        # Define a generic Home and Primary activity location.
+        from_edge, to_edge = self._stages_define_main_locations(from_area, to_area, mode)
 
         ## Generate perliminary stages for a person
         person_stages = dict()
@@ -564,116 +665,48 @@ class MobilityGenerator(object):
                     raise Exception("Every activity chain MUST start with 'Home',"
                                     " '{}' given.".format(activity))
                 ## Beginning
-                person_stages[pos] = {
-                    'activity': activity,
-                    'from': from_edge,
-                    'to': None,
-                    'start': _start,
-                    'duration': _duration,
-                }
+                person_stages[pos] = Activity(
+                    activity=activity, fromEdge=from_edge, start=_start, duration=_duration)
             elif 'P-' in activity:
                 ## This is a primary activity
-                person_stages[pos] = {
-                    'activity': activity,
-                    'from': None,
-                    'to': to_edge,
-                    'start': _start,
-                    'duration': _duration,
-                }
+                person_stages[pos] = Activity(
+                    activity=activity, toEdge=to_edge, start=_start, duration=_duration)
             elif 'S-' in activity:
                 ## This is a secondary activity
-                person_stages[pos] = {
-                    'activity': activity,
-                    'from': None,
-                    'to': None,
-                    'start': _start,
-                    'duration': _duration,
-                }
+                person_stages[pos] = Activity(
+                    activity=activity, start=_start, duration=_duration)
             elif activity == 'Home':
                 ## End of the activity chain.
-                person_stages[pos] = {
-                    'activity': activity,
-                    'from': None,
-                    'to': from_edge,
-                    'start': _start,
-                    'duration': _duration,
-                }
+                person_stages[pos] = Activity(
+                    activity=activity, toEdge=from_edge, start=_start, duration=_duration)
 
         if len(person_stages) <= 2:
             raise Exception("Invalid activity chain. (Minimal: H -> P-? -> H", activity_chain)
 
         ## Define secondary activity location
-        for pos, stage in person_stages.items():
-            if  'S-' in stage['activity']:
-                ## look for what is coming before
-                _prec = None
-                _pos = pos - 1
-                while not _prec and _pos in person_stages:
-                    if 'Home' in person_stages[_pos]['activity']:
-                        _prec = 'H'
-                    elif 'P-' in person_stages[_pos]['activity']:
-                        _prec = 'P'
-                    _pos -= 1
-
-                ## look for what is coming next
-                _succ = None
-                _pos = pos + 1
-                while not _succ and _pos in person_stages:
-                    if 'Home' in person_stages[_pos]['activity']:
-                        _succ = 'H'
-                    elif 'P-' in person_stages[_pos]['activity']:
-                        _succ = 'P'
-                    _pos += 1
-
-                destination = None
-                if _prec == 'H' and _succ == 'H':
-                    destination = self._random_location_circle(center=from_edge, other=to_edge)
-                elif _prec == 'P' and _succ == 'P':
-                    destination = self._random_location_circle(center=to_edge, other=from_edge)
-                elif _prec != _succ:
-                    destination = self._random_location_ellipse(from_edge, to_edge)
-                else:
-                    raise Exception("WTF", _prec, _succ)
-
-                stage['to'] = destination
+        person_stages = self._stages_define_secondary_locations(person_stages, from_edge, to_edge)
 
         ## Remove the initial 'Home' stage and update the from of the second stage.
-        person_stages[1]['from'] = person_stages[0]['from']
+        person_stages[1] = person_stages[1]._replace(fromEdge=person_stages[0].fromEdge)
         is_start_to_fix = True
-        if person_stages[0]['start']:
+        if person_stages[0].start:
             is_start_to_fix = False
-            person_stages[1]['start'] = person_stages[0]['start']
+            person_stages[1] = person_stages[1]._replace(start=person_stages[0].stage)
         del person_stages[0]
 
         ## Fixing the 'from' field with a forward chain
         pos = 2
         while pos in person_stages:
-            person_stages[pos]['from'] = person_stages[pos-1]['to']
+            person_stages[pos] = person_stages[pos]._replace(fromEdge=person_stages[pos-1].toEdge)
             pos += 1
 
         ## IF NECESSARY, compute the real starting time for the activity chain.
-        # Find the first 'start' defined.
         if is_start_to_fix:
-            pos = 1
-            while pos in person_stages:
-                if person_stages[pos]['start']:
-                    break
-                pos += 1
+            start = self._stages_compute_start_time(person_stages)
+            person_stages[1] = person_stages[1]._replace(start=start)
 
-            start = person_stages[pos]['start']
-            while pos in person_stages:
-                ett = 500.0
-                try:
-                    ett = traci.simulation.findRoute(
-                        person_stages[pos]['from'], person_stages[pos]['to']).travelTime
-                except traci.exceptions.TraCIException:
-                    pass
-                if pos-1 in person_stages:
-                    if person_stages[pos-1]['duration']:
-                        ett += person_stages[pos-1]['duration']
-                start -= ett
-                pos -= 1
-            person_stages[1]['start'] = start
+        ## Define the position of each location in the activity chain.
+        person_stages = self._stages_define_locations_position(person_stages)
 
         return person_stages
 
@@ -1023,7 +1056,7 @@ class MobilityGenerator(object):
         <stop lane="{lane}" parking="true" triggered="true" expected="{person}"/>"""
 
     ONDEMAND_TRIGGERED = """
-        <stop lane="{lane}" parking="true" duration="1.0"/>"""
+        <stop lane="{lane}" parking="true" startPos="{start}" endPos="{end}" duration="1.0"/>"""
 
     FINAL_STOP = """
         <stop lane="{lane}" duration="1.0"/>"""
@@ -1048,10 +1081,10 @@ class MobilityGenerator(object):
         <ride busStop="{busStop}" lines="{lines}" intended="{intended}" depart="{depart}"/>"""
 
     RIDE_TRIGGERED = """
-        <ride from="{from_edge}" to="{to_edge}" lines="{vehicle_id}"/>"""
+        <ride from="{from_edge}" to="{to_edge}" arrivalPos="{arrival}" lines="{vehicle_id}"/>"""
 
     VEHICLE_TRIGGERED = """
-    <vehicle id="{id}" type="{v_type}" depart="triggered" departLane="best" arrivalPos="{arrival}">{route}{stops}
+    <vehicle id="{id}" type="{v_type}" depart="triggered" departPos="{depart}" arrivalPos="{arrival}">{route}{stops}
     </vehicle>"""
 
     def _get_stopping_lane(self, edge):
@@ -1107,10 +1140,11 @@ class MobilityGenerator(object):
                                 lane=self._get_stopping_lane(stage.edges[-1]))
                         else:
                             _stop = self.ONDEMAND_TRIGGERED.format(
-                                lane=self._get_stopping_lane(stage.edges[-1]))
+                                lane=self._get_stopping_lane(stage.edges[-1]),
+                                start='TEST', end='TEST')
                         triggered += self.VEHICLE_TRIGGERED.format(
                             id=_ride_id, v_type=_vtype, route=_route,
-                            stops=_stop, arrival='random')
+                            stops=_stop, arrival='TEST', depart='TEST')
                     else:
                         ## add to the existing one
                         _ride_id = _tr_id
@@ -1144,14 +1178,15 @@ class MobilityGenerator(object):
                         _triggered_stops += _stop
 
                     stages += self.RIDE_TRIGGERED.format(
-                        from_edge=stage.edges[0], to_edge=stage.edges[-1], vehicle_id=_ride_id)
+                        from_edge=stage.edges[0], to_edge=stage.edges[-1], vehicle_id=_ride_id,
+                        arrival='TEST')
 
         ## fixing the personal triggered vehicles
         if _triggered_route:
             _route = self.ROUTE.format(edges=' '.join(_triggered_route))
             triggered += self.VEHICLE_TRIGGERED.format(
                 id=_tr_id, v_type=_triggered_vtype, route=_route,
-                stops=_triggered_stops, arrival='random')
+                stops=_triggered_stops, arrival='TEST', depart='TEST')
 
         ## result
         complete_trip += triggered
