@@ -21,8 +21,6 @@ import pstats
 import sys
 import xml.etree.ElementTree
 
-import pprint
-
 import numpy
 from numpy.random import RandomState
 from tqdm import tqdm
@@ -87,9 +85,43 @@ Activity = collections.namedtuple(
     ['activity', 'fromEdge', 'toEdge', 'arrivalPos', 'start', 'duration'],
     defaults=(None,) * 6)
 
-class TripGenerationError(Exception):
+class TripGenerationGenericError(Exception):
+    """ During the trip generation, various erroroneous states can be reached.
+    """
+    message = None
+    def __init__(self, message=None):
+        """ Init the error message. """
+        super().__init__()
+        self.message = message
+        if self.message:
+            logging.debug(self.message)
+
+class TripGenerationActivityError(TripGenerationGenericError):
+    """ During the generation from the activity chains, various erroroneous states can be reached.
+    """
+    message = None
+    def __init__(self, message=None):
+        """ Init the error message. """
+        super().__init__()
+        self.message = message
+        if self.message:
+            logging.error(self.message)
+
+class TripGenerationRouteError(TripGenerationGenericError):
     """ During the step by step generation of the trip, it is possible to reach a state in which
-        some of the chosen locations are impossible to reach in that order.
+        some of the chosen locations are impossible to reach.
+    """
+    message = None
+    def __init__(self, message=None):
+        """ Init the error message. """
+        super().__init__()
+        self.message = message
+        if self.message:
+            logging.debug(self.message)
+
+class TripGenerationInconsistencyError(TripGenerationGenericError):
+    """ During the step by step generation of the trip, it is possible to reach a state in which
+        some of the chosen modes are impossible to be used in that order.
     """
     message = None
     def __init__(self, message=None):
@@ -259,17 +291,17 @@ class MobilityGenerator(object):
         """
         logging.info('Population: %d', self._conf['population']['entities'])
 
-        for m_slice in self._conf['distribution'].keys():
-            self._conf['distribution'][m_slice]['tot'] = int(
-                self._conf['population']['entities'] * self._conf['distribution'][m_slice]['perc'])
-            logging.info('\t %s: %d', m_slice, self._conf['distribution'][m_slice]['tot'])
+        for m_slice in self._conf['slices'].keys():
+            self._conf['slices'][m_slice]['tot'] = int(
+                self._conf['population']['entities'] * self._conf['slices'][m_slice]['perc'])
+            logging.info('\t %s: %d', m_slice, self._conf['slices'][m_slice]['tot'])
 
     def _compute_trips_per_slice(self):
         """ Compute the trips for the synthetic population for each mobility slice. """
 
         total = 0
 
-        for name, m_slice in self._conf['distribution'].items():
+        for name, m_slice in self._conf['slices'].items():
             logging.info('[%s] Computing %d trips from %s to %s ... ',
                          name, m_slice['tot'], m_slice['loc_origin'], m_slice['loc_primary'])
 
@@ -308,6 +340,8 @@ class MobilityGenerator(object):
 
                         ## Generating departure time
                         _depart = numpy.round(_final_chain[1].start, decimals=2)
+                        if _depart < 0.0:
+                            raise TripGenerationGenericError('Negative departure time.')
                         if _depart not in self._all_trips[name].keys():
                             self._all_trips[name][_depart] = []
 
@@ -316,32 +350,26 @@ class MobilityGenerator(object):
                             _stages[-1] = _stages[-1]._replace(travelTime=1.0)
                             _stages[-1] = _stages[-1]._replace(cost=1.0)
 
-                        ## fix the last ride with cost = 1.0 on order to fix the last stop
+                        ## fix the last ride with cost = -42.42 on order to fix the last stop
                         _pos = len(_stages) - 1
                         while _pos >= 0:
                             if  _stages[_pos].stageType == tc.STAGE_DRIVING:
                                 if not  _stages[_pos].destStop:
-                                    _stages[_pos] = _stages[_pos]._replace(travelTime=1.0)
-                                    _stages[_pos] = _stages[_pos]._replace(cost=1.0)
+                                    _stages[_pos] = _stages[_pos]._replace(travelTime=-42.42)
+                                    _stages[_pos] = _stages[_pos]._replace(cost=-42.42)
                                     break
                             _pos -= 1
 
                         _person_trip = {
                             'id': '{}_{}'.format(name, entity_id),
                             'depart': _depart,
-                            # 'from': _from,
-                            # 'to': _to,
-                            # 'type': v_type,
-                            # 'mode': modes,
-                            # 'withParking': with_parking,
-                            # 'PLid': parking_id,
                             'stages': _stages,
                         }
 
                         complete_trip = self._generate_sumo_trip_from_activitygen(_person_trip)
                         _person_trip['string'] = complete_trip
 
-                    except TripGenerationError:
+                    except (TripGenerationGenericError):
                         _person_trip = None
                         _error_counter += 1
                         if _error_counter % 10 == 0:
@@ -484,7 +512,7 @@ class MobilityGenerator(object):
                             route.append(self._generate_waiting_stage(stage))
 
                 if not route:
-                    raise TripGenerationError(
+                    raise TripGenerationRouteError(
                         'Route not found between {} and {}.'.format(stage.fromEdge, stage.toEdge))
 
                 ## Add the stage to the full planned trip.
@@ -494,15 +522,6 @@ class MobilityGenerator(object):
 
             ## Cost computation.
             solutions.append((self._cost_from_route(_person_steps), _person_steps))
-
-            for position, thingy in enumerate(_person_steps):
-                if (thingy.stageType == tc.STAGE_DRIVING and
-                        thingy.line == '' and ## Not PUBLIC TRANSPORT
-                        thingy.edges[0] == thingy.edges[-1]):
-                    pprint.pprint(person_stages)
-                    pprint.pprint(_person_steps)
-                    print(position, thingy)
-                    sys.exit()
 
         ## Compose the final person trip.
         if solutions:
@@ -514,7 +533,7 @@ class MobilityGenerator(object):
             #     print(pos, step)
             # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
         else:
-            raise TripGenerationError(
+            raise TripGenerationRouteError(
                 'No solution foud for chain {} and modes {}.'.format(person_stages, modes))
         return trip
 
@@ -593,7 +612,7 @@ class MobilityGenerator(object):
                 elif _prec != _succ:
                     destination = self._random_location_ellipse(home, primary)
                 else:
-                    raise TripGenerationError(
+                    raise TripGenerationActivityError(
                         'Invalid sequence in the activity chain: {} --> {}'.format(_prec, _succ))
 
                 person_stages[pos] = stage._replace(toEdge=destination)
@@ -729,7 +748,7 @@ class MobilityGenerator(object):
         try:
             length = traci.simulation.findRoute(center, other).length
         except traci.exceptions.TraCIException:
-            raise TripGenerationError('No route between {} and {}'.format(center, other))
+            raise TripGenerationActivityError('No route between {} and {}'.format(center, other))
         major_axe = length * 1.3
         minor_axe = numpy.sqrt(numpy.square(major_axe) - numpy.square(length))
         radius = minor_axe / 2.0
@@ -737,17 +756,19 @@ class MobilityGenerator(object):
         edges = self._get_all_reachable_edges(center, radius)
 
         if not edges:
-            raise TripGenerationError('No edges from {} with range {}.'.format(center, length))
+            raise TripGenerationActivityError(
+                'No edges from {} with range {}.'.format(center, length))
 
         ret = self._random_generator.choice(edges)
+        edges.remove(ret)
         allowed = (
             self._sumo_network.getEdge(ret).allows('pedestrian') and
             self._sumo_network.getEdge(ret).allows('passenger') and
             ret != center and ret != other and
             self._sumo_network.getEdge(ret).getLength() > self._conf['minEdgeAllowed'])
         while edges and not allowed:
-            edges.remove(ret)
             ret = self._random_generator.choice(edges)
+            edges.remove(ret)
             allowed = (
                 self._sumo_network.getEdge(ret).allows('pedestrian') and
                 self._sumo_network.getEdge(ret).allows('passenger') and
@@ -755,7 +776,7 @@ class MobilityGenerator(object):
                 self._sumo_network.getEdge(ret).getLength() > self._conf['minEdgeAllowed'])
 
         if not edges:
-            raise TripGenerationError(
+            raise TripGenerationActivityError(
                 'No valid edges from {} with range {}.'.format(center, length))
         return ret
 
@@ -768,7 +789,7 @@ class MobilityGenerator(object):
             length = traci.simulation.findRoute(focus1, focus2).length
             logging.debug('%s --> %s : %.2f', focus1, focus2, length)
         except traci.exceptions.TraCIException:
-            raise TripGenerationError('No route between {} and {}'.format(focus1, focus2))
+            raise TripGenerationActivityError('No route between {} and {}'.format(focus1, focus2))
 
         major_axe = length * 1.3
 
@@ -794,7 +815,7 @@ class MobilityGenerator(object):
             except traci.exceptions.TraCIException:
                 pass
 
-        raise TripGenerationError(
+        raise TripGenerationActivityError(
             "No location available for _random_location_ellipse [{}, {}]".format(focus1, focus2))
 
     def _get_all_reachable_edges(self, origin, distance):
@@ -925,19 +946,19 @@ class MobilityGenerator(object):
         """
 
         from_edge = from_taz.pop(
-            self._random_generator.random_integers(0, len(from_taz) - 1))
+            self._random_generator.randint(0, len(from_taz)))
         to_edge = to_taz.pop(
-            self._random_generator.random_integers(0, len(to_taz) - 1))
+            self._random_generator.randint(0, len(to_taz)))
 
         _to = False
         while not self._valid_pair(from_edge, to_edge) and from_taz and to_taz:
             if not self._sumo_network.getEdge(to_edge).allows('pedestrian') or _to:
                 to_edge = to_taz.pop(
-                    self._random_generator.random_integers(0, len(to_taz) - 1))
+                    self._random_generator.randint(0, len(to_taz)))
                 _to = False
             else:
                 from_edge = from_taz.pop(
-                    self._random_generator.random_integers(0, len(from_taz) - 1))
+                    self._random_generator.randint(0, len(from_taz)))
                 _to = True
 
         return from_edge, to_edge
@@ -1112,7 +1133,7 @@ class MobilityGenerator(object):
         for lane in self._sumo_network.getEdge(edge).getLanes():
             if lane.allows('passenger'):
                 return lane.getID()
-        raise TripGenerationError("'passenger' cannot stop on edge {}".format(edge))
+        raise TripGenerationGenericError("'passenger' cannot stop on edge {}".format(edge))
 
     def _generate_sumo_trip_from_activitygen(self, person):
         """ Generate the XML string for SUMO route file from a person-trip. """
@@ -1125,6 +1146,7 @@ class MobilityGenerator(object):
         _triggered_stops = ''
         stages = ''
         _last_arrival_pos = None
+        _internal_consistency_check = []
         for stage in person['stages']:
             if stage.stageType == tc.STAGE_WAITING:
                 stages += self.WAIT.format(lane=stage.edges,
@@ -1171,12 +1193,15 @@ class MobilityGenerator(object):
                                 id=_ride_id, v_type=_vtype, route=_route, stops=_stop)
                         _last_arrival_pos = stage.arrivalPos
                     else:
+                        ## consistency check
+                        _internal_consistency_check.append(stage.intended)
                         ## add to the existing one
                         _ride_id = _tr_id
                         if _triggered_route:
                             ## check for contiguity
                             if _triggered_route[-1] != stage.edges[0]:
-                                raise TripGenerationError('Triggered vehicle has a broken route.')
+                                raise TripGenerationInconsistencyError(
+                                    'Triggered vehicle has a broken route.')
                             else:
                                 ## remove the duplicated edge
                                 _triggered_route.extend(stage.edges[1:])
@@ -1186,7 +1211,7 @@ class MobilityGenerator(object):
                         _triggered_vtype = stage.vType
                         _stop = ''
                         # print(stage.travelTime, stage.destStop)
-                        if stage.travelTime == 1.0:
+                        if stage.travelTime == -42.42:
                             # print('final stop')
                             _stop = self.FINAL_STOP.format(
                                 lane=self._get_stopping_lane(stage.edges[-1]))
@@ -1215,6 +1240,16 @@ class MobilityGenerator(object):
                 id=_tr_id, v_type=_triggered_vtype, route=_route,
                 stops=_triggered_stops, arrival='random', depart='random')
 
+        ## internal consistency test
+        if _internal_consistency_check:
+            if person['stages'][0].stageType != tc.STAGE_DRIVING:
+                raise TripGenerationInconsistencyError(
+                    'Triggered vehicle does not start from the beginning.')
+            if person['stages'][-2].stageType != tc.STAGE_DRIVING:
+                ## person['stages'][-1] is the stop
+                raise TripGenerationInconsistencyError(
+                    'Triggered vehicle does not finish at the end.')
+
         ## result
         complete_trip += triggered
         complete_trip += self.PERSON.format(
@@ -1239,8 +1274,8 @@ def _main():
     """ Person Trip Activity-based Mobility Generation with PoIs and TAZ. """
 
     ## ========================              PROFILER              ======================== ##
-    # profiler = cProfile.Profile()
-    # profiler.enable()
+    profiler = cProfile.Profile()
+    profiler.enable()
     ## ========================              PROFILER              ======================== ##
 
     args = _args()
@@ -1254,10 +1289,10 @@ def _main():
     mobility.close_traci()
 
     ## ========================              PROFILER              ======================== ##
-    # profiler.disable()
-    # results = io.StringIO()
-    # pstats.Stats(profiler, stream=results).sort_stats('cumulative').print_stats(25)
-    # print(results.getvalue())
+    profiler.disable()
+    results = io.StringIO()
+    pstats.Stats(profiler, stream=results).sort_stats('cumulative').print_stats(25)
+    print(results.getvalue())
     ## ========================              PROFILER              ======================== ##
 
     logging.info('Done.')
