@@ -1,5 +1,10 @@
-MoSTScenario/*
-out/*
+# Testing
+MoSTScenario
+random
+out*/*
+sim*/*
+*.xml
+*.errorlog
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
