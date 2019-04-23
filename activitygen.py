@@ -21,19 +21,21 @@ import pstats
 import sys
 import xml.etree.ElementTree
 
+from enum import Enum
+
 import numpy
 from numpy.random import RandomState
 from tqdm import tqdm
 
 # """ Import SUMOLIB """
-if 'SUMO_DEV_TOOLS' in os.environ:
-    sys.path.append(os.environ['SUMO_DEV_TOOLS'])
+if 'SUMO_TOOLS' in os.environ:
+    sys.path.append(os.environ['SUMO_TOOLS'])
     import sumolib
-    # from sumolib.miscutils import euclidean
+    # import libsumo as traci
     import traci
     import traci.constants as tc
 else:
-    sys.exit("Please declare environment variable 'SUMO_DEV_TOOLS'")
+    sys.exit("Please declare environment variable 'SUMO_TOOLS'")
 
 BASE_DIR = None
 if 'MOBILITY_GENERATOR' in os.environ:
@@ -131,11 +133,22 @@ class TripGenerationInconsistencyError(TripGenerationGenericError):
         if self.message:
             logging.error(self.message)
 
+class ModeShare(Enum):
+    """ Selector between two interpretation of the values used for the modes:
+        - PROBABILITY: only one mode is selected using the given probability.
+        - WEIGHT: all the modes are generated, the cost is multiplied by the given weight and
+                    only the cheapest solution is used.
+    """
+    PROBABILITY = 1
+    WEIGHT = 2
+
 class MobilityGenerator(object):
     """ Generates intermodal mobility for SUMO starting from a synthetic population. """
 
     _conf = None
     _profiling = None
+
+    _mode_interpr = None
 
     _random_generator = None
 
@@ -159,6 +172,17 @@ class MobilityGenerator(object):
         """
 
         self._conf = conf
+
+        if not conf['population']['modeSelection']:
+            raise Exception('The parameter "modeSelection" in "population" must be defined.')
+        elif conf['population']['modeSelection'] == 'PROBABILITY':
+            self._mode_interpr = ModeShare.PROBABILITY
+        elif conf['population']['modeSelection'] == 'WEIGHT':
+            self._mode_interpr = ModeShare.WEIGHT
+        else:
+            raise Exception('The parameter "modeSelection" in "population" must be set to '
+                            '"PROBABILITY" or "WEIGHT".')
+
         self._profiling = profiling
 
         self._random_generator = RandomState(seed=self._conf['seed'])
@@ -301,6 +325,8 @@ class MobilityGenerator(object):
 
         total = 0
 
+        _modes_stats = collections.defaultdict(int)
+
         for name, m_slice in self._conf['slices'].items():
             logging.info('[%s] Computing %d trips from %s to %s ... ',
                          name, m_slice['tot'], m_slice['loc_origin'], m_slice['loc_primary'])
@@ -333,7 +359,7 @@ class MobilityGenerator(object):
                 _error_counter = 0
                 while not _person_trip:
                     try:
-                        _final_chain, _stages = self._generate_trip_traci(
+                        _final_chain, _stages, _selected_mode = self._generate_trip_traci(
                             self._conf['taz'][m_slice['loc_origin']],
                             self._conf['taz'][m_slice['loc_primary']],
                             _chain, _modes)
@@ -368,6 +394,8 @@ class MobilityGenerator(object):
 
                         complete_trip = self._generate_sumo_trip_from_activitygen(_person_trip)
                         _person_trip['string'] = complete_trip
+                        ## For statistical purposes.
+                        _modes_stats[_selected_mode] += 1
 
                     except (TripGenerationGenericError):
                         _person_trip = None
@@ -393,6 +421,8 @@ class MobilityGenerator(object):
                 input("Press any key to continue..")
 
         logging.info('Generated %d trips.', total)
+        for mode, value in _modes_stats.items():
+            logging.info('\t %s: %d (%.2f).', mode, value, float(value/total))
 
     ## ---- PARKING AREAS: location and selection ---- ##
 
@@ -443,18 +473,30 @@ class MobilityGenerator(object):
         """ Returns the trip for the given activity chain. """
 
         trip = None
-
-        person_stages = self._generate_person_stages(from_area, to_area, activity_chain, modes[0])
         solutions = []
 
-        for mode in modes:
+        _interpr_modes = None
+        if self._mode_interpr == ModeShare.PROBABILITY:
+            _probs = []
+            _vals = []
+            for mode, prob in modes:
+                _vals.append(mode)
+                _probs.append(prob)
+            selection = self._random_generator.choice(_vals, p=_probs)
+            _interpr_modes = [[selection, 1.0]] ## Unique mode, with 'no' weight.
+        else:
+            _interpr_modes = modes
+
+        for mode, weight in _interpr_modes:
+
+            _person_stages = self._generate_person_stages(from_area, to_area, activity_chain, mode)
 
             _person_steps = []
             _new_start_time = None
 
             _mode, _ptype, _vtype = self._get_mode_parameters(mode)
 
-            for pos, stage in person_stages.items():
+            for pos, stage in _person_stages.items():
                 # findIntermodalRoute(self, fromEdge, toEdge, modes='', depart=-1.0,
                 #                     routingMode=0, speed=-1.0, walkFactor=-1.0,
                 #                     departPos=0.0, arrivalPos=-1073741824, departPosLat=0.0,
@@ -495,8 +537,8 @@ class MobilityGenerator(object):
                         route.append(walk_back)
 
                         ## update the next stage to make it start from the parking
-                        if pos + 1 in person_stages:
-                            person_stages[pos+1] = person_stages[pos+1]._replace(fromEdge=p_edge)
+                        if pos + 1 in _person_stages:
+                            _person_stages[pos+1] = _person_stages[pos+1]._replace(fromEdge=p_edge)
                 else:
                     ## PUBLIC, ON-DEMAND, trip to HOME, and NO-PARKING required vehicles.
                     route = traci.simulation.findIntermodalRoute(
@@ -521,20 +563,18 @@ class MobilityGenerator(object):
                     _person_steps.append(step)
 
             ## Cost computation.
-            solutions.append((self._cost_from_route(_person_steps), _person_steps))
+            solutions.append(
+                (self._cost_from_route(_person_steps) * weight,
+                 _person_steps, _person_stages, mode))
 
         ## Compose the final person trip.
         if solutions:
-            ## TODO: pick and chose a winner among the different modes,
-            #        for the moment there is only one.
-            trip = (person_stages, solutions[0][1])
-            # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    STEPS    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-            # for pos, step in enumerate(solutions[0][1]):
-            #     print(pos, step)
-            # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+            ## For the moment, the best solution is the one with minor cost.
+            best = sorted(solutions)[0] ## Ascending.
+            trip = (best[2], best[1], best[3]) ## _person_stages, _person_steps, mode
         else:
-            raise TripGenerationRouteError(
-                'No solution foud for chain {} and modes {}.'.format(person_stages, modes))
+            raise TripGenerationRouteError('No solution foud for chain {} and modes {}.'.format(
+                activity_chain, _interpr_modes))
         return trip
 
     @staticmethod
