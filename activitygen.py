@@ -83,7 +83,7 @@ def _load_configurations(filename):
 ## For SUMO API compatibility
 Stage = collections.namedtuple(
     'Stage',
-    ['stageType', 'vType', 'line', 'destStop', 'edges', 'travelTime', 'cost', 'length', 'intended',
+    ['type', 'vType', 'line', 'destStop', 'edges', 'travelTime', 'cost', 'length', 'intended',
      'depart', 'departPos', 'arrivalPos', 'description'],
     defaults=('',) * 13)
 
@@ -378,14 +378,14 @@ class MobilityGenerator(object):
                             self._all_trips[name][_depart] = []
 
                         ## fix the last stop with 1.0 duration
-                        if _stages[-1].stageType == tc.STAGE_WAITING:
+                        if _stages[-1].type == tc.STAGE_WAITING:
                             _stages[-1] = _stages[-1]._replace(travelTime=1.0)
                             _stages[-1] = _stages[-1]._replace(cost=1.0)
 
                         ## fix the last ride with cost = -42.42 on order to fix the last stop
                         _pos = len(_stages) - 1
                         while _pos >= 0:
-                            if  _stages[_pos].stageType == tc.STAGE_DRIVING:
+                            if  _stages[_pos].type == tc.STAGE_DRIVING:
                                 if not  _stages[_pos].destStop:
                                     _stages[_pos] = _stages[_pos]._replace(travelTime=-42.42)
                                     _stages[_pos] = _stages[_pos]._replace(cost=-42.42)
@@ -524,7 +524,7 @@ class MobilityGenerator(object):
                             modes=_mode, pType=_ptype, vType=_vtype)
 
                         if (self._is_valid_route(mode, route) and
-                                route[-1].stageType == tc.STAGE_DRIVING):
+                                route[-1].type == tc.STAGE_DRIVING):
                             route[-1] = route[-1]._replace(destStop=p_id)
                             route[-1] = route[-1]._replace(arrivalPos=self._parking_position[p_id])
                             route.extend(_last_mile)
@@ -587,7 +587,7 @@ class MobilityGenerator(object):
     def _generate_waiting_stage(stage):
         """ Builds a STAGE_WAITING type of stage compatible with findIntermodalRoute. """
         wait = Stage(
-            stageType=tc.STAGE_WAITING, description=stage.activity,
+            type=tc.STAGE_WAITING, description=stage.activity,
             edges='{}_0'.format(stage.toEdge), travelTime=stage.duration,
             cost=stage.duration)
         return wait
@@ -1090,7 +1090,7 @@ class MobilityGenerator(object):
                     return True
         elif mode == 'car':
             for stage in route:
-                if stage.stageType == tc.STAGE_DRIVING and len(stage.edges) >= 2:
+                if stage.type == tc.STAGE_DRIVING and len(stage.edges) >= 2:
                     return True
         else:
             for stage in route:
@@ -1194,11 +1194,11 @@ class MobilityGenerator(object):
         _last_arrival_pos = None
         _internal_consistency_check = []
         for stage in person['stages']:
-            if stage.stageType == tc.STAGE_WAITING:
+            if stage.type == tc.STAGE_WAITING:
                 stages += self.WAIT.format(lane=stage.edges,
                                            duration=stage.travelTime,
                                            action=stage.description)
-            elif stage.stageType == tc.STAGE_WALKING:
+            elif stage.type == tc.STAGE_WALKING:
                 if stage.destStop:
                     stages += self.WALK_BUS.format(
                         edges=' '.join(stage.edges), busStop=stage.destStop)
@@ -1209,7 +1209,7 @@ class MobilityGenerator(object):
                         _last_arrival_pos = stage.arrivalPos
                     else:
                         stages += self.WALK.format(edges=' '.join(stage.edges))
-            elif stage.stageType == tc.STAGE_DRIVING:
+            elif stage.type == tc.STAGE_DRIVING:
                 if stage.line != stage.intended:
                     # intended is the transport id, so it must be different
                     stages += self.RIDE_BUS.format(
@@ -1288,10 +1288,10 @@ class MobilityGenerator(object):
 
         ## internal consistency test
         if _internal_consistency_check:
-            if person['stages'][0].stageType != tc.STAGE_DRIVING:
+            if person['stages'][0].type != tc.STAGE_DRIVING:
                 raise TripGenerationInconsistencyError(
                     'Triggered vehicle does not start from the beginning.')
-            if person['stages'][-2].stageType != tc.STAGE_DRIVING:
+            if person['stages'][-2].type != tc.STAGE_DRIVING:
                 ## person['stages'][-1] is the stop
                 raise TripGenerationInconsistencyError(
                     'Triggered vehicle does not finish at the end.')
