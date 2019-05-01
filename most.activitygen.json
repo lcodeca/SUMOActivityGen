@@ -1,5 +1,5 @@
 {
-    "seed": 19860406,
+    "seed": 42,
     "outputPrefix": "out/test.",
 
     "sumocfg": "duarouter.sumocfg",
@@ -22,7 +22,7 @@
     },
 
     "population": {
-        "entities" : 1000,
+        "entities" : 10000,
         "tazDefinition": "MoSTScenario/tools/mobility/taz/most.complete.taz.xml",
         "tazWeights": "MoSTScenario/tools/mobility/taz/most.complete.taz.weight.csv",
         "buildingsWeight": "MoSTScenario/tools/mobility/taz/buildings/",

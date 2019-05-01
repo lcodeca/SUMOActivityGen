@@ -31,7 +31,6 @@ from tqdm import tqdm
 if 'SUMO_TOOLS' in os.environ:
     sys.path.append(os.environ['SUMO_TOOLS'])
     import sumolib
-    # import libsumo as traci
     import traci
     import traci.constants as tc
 else:
@@ -65,6 +64,13 @@ def _args():
     parser.add_argument(
         '-c', type=str, dest='config', required=True,
         help='JSON configuration file.')
+    parser.add_argument(
+        '--profiling', dest='profiling', action='store_true',
+        help='Enable Python3 cProfile feature.')
+    parser.add_argument(
+        '--no-profiling', dest='profiling', action='store_false',
+        help='Disable Python3 cProfile feature.')
+    parser.set_defaults(profiling=False)
     return parser.parse_args()
 
 def _load_configurations(filename):
@@ -397,7 +403,7 @@ class MobilityGenerator(object):
                         ## For statistical purposes.
                         _modes_stats[_selected_mode] += 1
 
-                    except (TripGenerationGenericError):
+                    except TripGenerationGenericError:
                         _person_trip = None
                         _error_counter += 1
                         if _error_counter % 10 == 0:
@@ -1313,26 +1319,28 @@ class MobilityGenerator(object):
 def _main():
     """ Person Trip Activity-based Mobility Generation with PoIs and TAZ. """
 
-    ## ========================              PROFILER              ======================== ##
-    profiler = cProfile.Profile()
-    profiler.enable()
-    ## ========================              PROFILER              ======================== ##
-
     args = _args()
+
+    ## ========================              PROFILER              ======================== ##
+    if args.profiling:
+        profiler = cProfile.Profile()
+        profiler.enable()
+    ## ========================              PROFILER              ======================== ##
 
     logging.info('Loading configuration file %s.', args.config)
     conf = _load_configurations(args.config)
 
-    mobility = MobilityGenerator(conf, profiling=False)
+    mobility = MobilityGenerator(conf, profiling=args.profiling)
     mobility.mobility_generation()
     mobility.save_mobility()
     mobility.close_traci()
 
     ## ========================              PROFILER              ======================== ##
-    profiler.disable()
-    results = io.StringIO()
-    pstats.Stats(profiler, stream=results).sort_stats('cumulative').print_stats(25)
-    print(results.getvalue())
+    if args.profiling:
+        profiler.disable()
+        results = io.StringIO()
+        pstats.Stats(profiler, stream=results).sort_stats('cumulative').print_stats(25)
+        print(results.getvalue())
     ## ========================              PROFILER              ======================== ##
 
     logging.info('Done.')
