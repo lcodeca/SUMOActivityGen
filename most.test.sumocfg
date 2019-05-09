@@ -14,8 +14,8 @@
 
     <input>
         <net-file value="MoSTScenario/scenario/in/most.net.xml"/>
-        <route-files value="out/test.buses.flows.xml,out/test.trains.flows.xml,out/test.3to1.rou.xml,out/test.2to1.rou.xml,out/test.1to2.rou.xml,out/test.1to1.rou.xml"/>
-        <!-- <route-files value="out/test.rou.xml"/> -->
+        <route-files value="rou/most.example.buses.flows.xml,rou/most.example.trains.flows.xml,rou/most.example.3to1.rou.xml,rou/most.example.2to1.rou.xml,rou/most.example.1to2.rou.xml,rou/most.example.1to1.rou.xml"/>
+        <!-- <route-files value="rou/most.example.rou.xml"/> -->
         <additional-files value="MoSTScenario/scenario/in/add/most.busstops.add.xml,MoSTScenario/scenario/in/add/most.trainstops.add.xml,MoSTScenario/scenario/in/add/most.parking.add.xml,MoSTScenario/scenario/in/add/basic.vType.xml"/>
     </input>
 
@@ -26,7 +26,7 @@
     </time>
 
     <output>
-        <output-prefix value="sim/test."/>
+        <output-prefix value="sim/example."/>
         <summary-output value="summary.xml"/>
         <tripinfo-output value="tripinfo.xml"/>
         <tripinfo-output.write-unfinished value="true"/>
@@ -68,6 +68,7 @@
         <verbose value="true"/>
         <log value="sumo.debug.log"/>
         <duration-log.statistics value="true"/>
+        <no-step-log value="true"/>
     </report>
 
     <random_number>

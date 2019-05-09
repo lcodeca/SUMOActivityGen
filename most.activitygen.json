@@ -1,8 +1,8 @@
 {
     "seed": 42,
-    "outputPrefix": "out/test.",
+    "outputPrefix": "rou/most.example.",
 
-    "sumocfg": "duarouter.sumocfg",
+    "sumocfg": "most.duarouter.sumocfg",
 
     "SUMOnetFile": "MoSTScenario/scenario/in/most.net.xml",
     "SUMOadditionals": {
@@ -22,7 +22,7 @@
     },
 
     "population": {
-        "entities" : 10000,
+        "entities" : 20000,
         "tazDefinition": "MoSTScenario/tools/mobility/taz/most.complete.taz.xml",
         "tazWeights": "MoSTScenario/tools/mobility/taz/most.complete.taz.weight.csv",
         "buildingsWeight": "MoSTScenario/tools/mobility/taz/buildings/",

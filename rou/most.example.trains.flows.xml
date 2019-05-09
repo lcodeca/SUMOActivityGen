@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- generated on 2019-05-09 15:16:13.679915 by $Id$
+  options: -n /home/drone/EURECOM/Projects/GITHUB/SUMOActivityGen/MoSTScenario/scenario/in/most.net.xml -b 0 -e 86400 -p 1200 -d 300 <doubleminus>random-begin <doubleminus>seed 42 <doubleminus>no-vtypes <doubleminus>ptstops /home/drone/EURECOM/Projects/GITHUB/SUMOActivityGen/MoSTScenario/scenario/in/add/most.trainstops.add.xml <doubleminus>ptlines /home/drone/EURECOM/Projects/GITHUB/SUMOActivityGen/MoSTScenario/tools/mobility/pt/most.trainlines.add.xml -o rou/most.example.trains.flows.xml
+-->
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <route id="train_M0:Italy" edges="-152191" >
+        <stop busStop="131067" duration="300.00" until="366.0"/> <!-- Carnoles -->
+        <stop busStop="131066" duration="300.00" until="822.0"/> <!-- Roquebrune-Cap-Martin -->
+        <stop busStop="131034" duration="300.00" until="1222.0"/> <!-- Monte-Carlo Country Club -->
+        <stop busStop="131065" duration="300.00" until="1708.0"/> <!-- Monaco - Monte Carlo -->
+        <stop busStop="131053" duration="300.00" until="2201.0"/> <!-- Cap d'Ail -->
+        <stop busStop="131023" duration="300.00" until="2671.0"/> <!-- Eze -->
+    </route>
+    <route id="train_M0:France" edges="152193" >
+        <stop busStop="131054" duration="300.00" until="315.0"/> <!-- Eze -->
+        <stop busStop="131032" duration="300.00" until="785.0"/> <!-- Cap d'Ail -->
+        <stop busStop="131028" duration="300.00" until="1278.0"/> <!-- Monaco - Monte Carlo -->
+        <stop busStop="131114" duration="300.00" until="1764.0"/> <!-- Monte-Carlo Country Club -->
+        <stop busStop="131025" duration="300.00" until="2164.0"/> <!-- Roquebrune-Cap-Martin -->
+        <stop busStop="131018" duration="300.00" until="2620.0"/> <!-- Carnoles -->
+    </route>
+    <flow id="train_M0:Italy" type="train" route="train_M0:Italy" begin="30.0" end="86430.0" period="1200" line="M0:Italy" >
+        <param key="name" value="MoSTtoItaly"/>
+    </flow>
+    <flow id="train_M0:France" type="train" route="train_M0:France" begin="767.0" end="87167.0" period="1200" line="M0:France" >
+        <param key="name" value="MoSTtoFrance"/>
+    </flow>
+</routes>
