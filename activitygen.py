@@ -799,8 +799,7 @@ class MobilityGenerator(object):
         minor_axe = numpy.sqrt(numpy.square(major_axe) - numpy.square(length))
         radius = minor_axe / 2.0
 
-        edges = self._get_all_reachable_edges(center, radius)
-
+        edges = self._get_all_neigh_edges(center, radius)
         if not edges:
             raise TripGenerationActivityError(
                 'No edges from {} with range {}.'.format(center, length))
@@ -839,7 +838,7 @@ class MobilityGenerator(object):
 
         major_axe = length * 1.3
 
-        edges = self._get_all_reachable_edges(focus1, length)
+        edges = self._get_all_neigh_edges(focus1, length)
         while edges:
             edge = self._random_generator.choice(edges)
             edges.remove(edge)
@@ -864,64 +863,14 @@ class MobilityGenerator(object):
         raise TripGenerationActivityError(
             "No location available for _random_location_ellipse [{}, {}]".format(focus1, focus2))
 
-    def _get_all_reachable_edges(self, origin, distance):
+    def _get_all_neigh_edges(self, origin, distance):
         """ Returns all the edges reachable from the origin within the given radius. """
-
-        logging.debug('Computing all reachable edges from %s in a %.2f radius.', origin, distance)
-
-        ### "BFS" with distance
-        _edges_already_done = set()
-        _nodes_already_done = set()
-        _edges_to_evaluate = [(origin, 0.0)]
-        _reachable_edges = set()
-
-        while _edges_to_evaluate:
-            _edge, _distance = _edges_to_evaluate.pop(0)
-            _edges_already_done.add(_edge)
-
-            # print(_edge, _distance, _edges_to_evaluate)
-
-            #retrieve node from
-            _from_node = self._sumo_network.getEdge(_edge).getFromNode()
-            if _from_node.getID() not in _nodes_already_done:
-                _nodes_already_done.add(_from_node.getID())
-                # if node from distance is smaller than the target,
-                # add all the incoming edge to the queue
-                if _distance < distance:
-                    _reachable_edges.add(_edge)
-                    #add all the incoming edges
-                    for _inc_edge in _from_node.getIncoming():
-                        if (_inc_edge.allows('passenger') and
-                                _inc_edge.getID() not in _edges_already_done and
-                                _inc_edge.getID() not in _edges_to_evaluate):
-                            # print(_inc_edge.getID())
-                            _edges_to_evaluate.append((_inc_edge.getID(),
-                                                       _distance + _inc_edge.getLength()))
-
-            #retrieve node to
-            _to_node = self._sumo_network.getEdge(_edge).getToNode()
-            if _to_node.getID() not in _nodes_already_done:
-                _nodes_already_done.add(_to_node.getID())
-                # if node to distance is smaller than the target,
-                # add all the incoming edge to the queue
-                if _distance < distance:
-                    _reachable_edges.add(_edge)
-                    #add all the outgoing edges
-                    for _out_edge in _to_node.getOutgoing():
-                        if (_out_edge.allows('passenger') and
-                                _out_edge.getID() not in _edges_already_done and
-                                _out_edge.getID() not in _edges_to_evaluate):
-                            # print(_out_edge.getID())
-                            _edges_to_evaluate.append((_out_edge.getID(),
-                                                       _distance + _out_edge.getLength()))
-
-        # with open('test.edges.txt', 'w') as out:
-        #     for edge in _reachable_edges:
-        #         out.write('edge:{}\n'.format(edge))
-
-        # input("Check the edges!")
-
-        return list(_reachable_edges)
+        _edge_shape = self._sumo_network.getEdge(origin).getShape()
+        x_coord = _edge_shape[-1][0]
+        y_coord = _edge_shape[-1][1]
+        edges = self._sumo_network.getNeighboringEdges(x_coord, y_coord, r=distance)
+        edges = [edge.getID() for edge, _ in edges]
+        return edges
 
     def _get_timing_from_activity(self, activity):
         """ Compute start and duration from the activity defined in the config file. """
