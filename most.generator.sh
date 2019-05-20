@@ -2,7 +2,7 @@
 
 # SUMO Activity-Based Mobility Generator
 #
-# Copyright (c) 2019 Lara CODECA - EURECOM
+# Author: Lara CODECA
 #
 # This program and the accompanying materials are made available under the
 # terms of the Eclipse Public License 2.0 which is available at

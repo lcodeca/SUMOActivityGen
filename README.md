@@ -1,7 +1,7 @@
 # SUMOActivityGen
 Activity-based Mobility Generation for SUMO Simulator
 
-Copyright (c) 2019 Lara CODECA - EURECOM
+Contacts: Lara CODECA [lara.codeca@gmail.com], Jerome HAERRI [haerri@eurecom.fr]
 
 This program and the accompanying materials are made available under the
 terms of the Eclipse Public License 2.0 which is available at http://www.eclipse.org/legal/epl-2.0.

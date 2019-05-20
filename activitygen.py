@@ -2,7 +2,7 @@
 
 """ SUMO Activity-Based Mobility Generator
 
-    Copyright (c) 2019 Lara CODECA - EURECOM
+    Author: Lara CODECA
 
     This program and the accompanying materials are made available under the
     terms of the Eclipse Public License 2.0 which is available at
@@ -1061,15 +1061,7 @@ class MobilityGenerator(object):
 
     ROUTES_TPL = """<?xml version="1.0" encoding="UTF-8"?>
 
-<!--
-    SUMO Activity-Based Mobility Generator
-
-    Copyright (c) 2019 Lara CODECA - EURECOM
-
-    This program and the accompanying materials are made available under the
-    terms of the Eclipse Public License 2.0 which is available at
-    http://www.eclipse.org/legal/epl-2.0.
--->
+<!-- Generated with SUMO Activity-Based Mobility Generator [https://github.com/lcodeca/SUMOActivityGen] -->
 
 <routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd"> {trips}
 </routes>"""
