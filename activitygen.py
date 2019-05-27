@@ -35,12 +35,6 @@ if 'SUMO_HOME' in os.environ:
 else:
     sys.exit("please declare environment variable 'SUMO_HOME'")
 
-BASE_DIR = None
-if 'MOBILITY_GENERATOR' in os.environ:
-    BASE_DIR = os.environ['MOBILITY_GENERATOR']
-else:
-    sys.exit("Please declare environment variable 'MOBILITY_GENERATOR'")
-
 def logs():
     """ Log init. """
     stdout_handler = logging.StreamHandler(sys.stdout)
@@ -186,31 +180,22 @@ class MobilityGenerator(object):
         self._random_generator = RandomState(seed=self._conf['seed'])
 
         logging.info('Starting TraCI with file %s.', conf['sumocfg'])
-        sumocfg = '{}/{}'.format(BASE_DIR, conf['sumocfg'])
-        traci.start(['sumo', '-c', sumocfg])
+        traci.start(['sumo', '-c', conf['sumocfg']])
 
-        logging.info('Loading SUMO net file %s%s', BASE_DIR, conf['SUMOnetFile'])
-        self._sumo_network = sumolib.net.readNet(
-            '{}/{}'.format(BASE_DIR, conf['SUMOnetFile']))
+        logging.info('Loading SUMO net file %s', conf['SUMOnetFile'])
+        self._sumo_network = sumolib.net.readNet(conf['SUMOnetFile'])
 
-        logging.info('Loading SUMO parking lots from file %s%s',
-                     BASE_DIR, conf['SUMOadditionals']['parkings'])
-        self._load_parkings('{}/{}'.format(BASE_DIR, conf['SUMOadditionals']['parkings']))
+        logging.info('Loading SUMO parking lots from file %s', conf['SUMOadditionals']['parkings'])
+        self._load_parkings(conf['SUMOadditionals']['parkings'])
 
-        logging.info('Loading TAZ weights from %s%s',
-                     BASE_DIR, conf['population']['tazWeights'])
-        self._load_weights_from_csv(
-            '{}/{}'.format(BASE_DIR, conf['population']['tazWeights']))
+        logging.info('Loading TAZ weights from %s', conf['population']['tazWeights'])
+        self._load_weights_from_csv(conf['population']['tazWeights'])
 
-        logging.info('Loading buildings weights from %s%s',
-                     BASE_DIR, conf['population']['buildingsWeight'])
-        self._load_buildings_weight_from_csv_dir(
-            '{}/{}'.format(BASE_DIR, conf['population']['buildingsWeight']))
+        logging.info('Loading buildings weights from %s', conf['population']['buildingsWeight'])
+        self._load_buildings_weight_from_csv_dir(conf['population']['buildingsWeight'])
 
-        logging.info('Loading edges in each TAZ from %s%s',
-                     BASE_DIR, conf['population']['tazDefinition'])
-        self._load_edges_from_taz(
-            '{}/{}'.format(BASE_DIR, conf['population']['tazDefinition']))
+        logging.info('Loading edges in each TAZ from %s', conf['population']['tazDefinition'])
+        self._load_edges_from_taz(conf['population']['tazDefinition'])
 
         logging.info('Computing the number of entities for each mobility slice..')
         self._compute_entities_per_slice()
@@ -255,8 +240,8 @@ class MobilityGenerator(object):
                 if not header:
                     header = row
                 else:
-                    self._taz_weights[int(row[0])] = {
-                        header[0]: int(row[0]),
+                    self._taz_weights[row[0]] = {
+                        header[0]: row[0],
                         header[1]: row[1],
                         header[2]: int(row[2]),
                         header[3]: float(row[3]),
@@ -1239,7 +1224,7 @@ class MobilityGenerator(object):
         """ Saving all te trips to files divided by slice. """
 
         for name, dict_trips in self._all_trips.items():
-            filename = '{}/{}{}.rou.xml'.format(BASE_DIR, self._conf['outputPrefix'], name)
+            filename = '{}{}.rou.xml'.format(self._conf['outputPrefix'], name)
             with open(filename, 'w') as tripfile:
                 all_trips = ''
                 for time in sorted(dict_trips.keys()):

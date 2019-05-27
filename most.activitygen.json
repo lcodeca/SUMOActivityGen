@@ -25,12 +25,12 @@
     },
 
     "taz": {
-        "MonacoArea1Generic": [1],
-        "MonacoArea1Detailed": [2, 3, 4, 5, 6, 7, 8, 9, 10],
-        "FranceArea2": [11, 12, 13, 14],
-        "FranceArea3": [15, 16],
-        "PrimaryGW": [31, 32, 33],
-        "SecondaryGW": [41, 42, 43, 44, 45]
+        "MonacoArea1Generic": ["1"],
+        "MonacoArea1Detailed": ["2", "3", "4", "5", "6", "7", "8", "9", "10"],
+        "FranceArea2": ["11", "12", "13", "14"],
+        "FranceArea3": ["15", "16"],
+        "PrimaryGW": ["31", "32", "33"],
+        "SecondaryGW": ["41", "42", "43", "44", "45"]
     },
 
     "activities": {
