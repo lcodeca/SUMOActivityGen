@@ -64,8 +64,8 @@ class AmitranFromTAZWeightsGenerator(object):
                 if not header:
                     header = row
                 else:
-                    self._taz_weights[int(row[0])] = {
-                        header[0]: int(row[0]),
+                    self._taz_weights[row[0]] = {
+                        header[0]: row[0],
                         header[1]: row[1],
                         header[2]: int(row[2]),
                         header[3]: float(row[3]),

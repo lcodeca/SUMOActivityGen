@@ -84,7 +84,7 @@ class GenerateTAZandWeightsFromOSM(object):
         logging.info('Filtering administrative boudaries from OSM..')
         self._filter_boundaries_from_osm()
 
-        logging.info("Extracting TAZ from OSM-like boundaries.")
+        logging.info("Extracting TAZ from OSM boundaries.")
         self._build_taz_from_osm()
 
         logging.info("Computing TAZ areas...")
@@ -136,7 +136,7 @@ class GenerateTAZandWeightsFromOSM(object):
         """ Extract boundaries from OSM structure. """
 
         for relation in tqdm(self._osm['relation']):
-            if self._is_boundary(relation['tag']):
+            if 'tag' in relation and self._is_boundary(relation['tag']):
                 self._osm_boundaries['relation'][relation['id']] = relation
                 for member in relation['member']:
                     self._osm_boundaries[member['type']][member['ref']] = {}
@@ -172,6 +172,10 @@ class GenerateTAZandWeightsFromOSM(object):
                                 coord = self._osm_boundaries['node'][node['ref']]
                                 list_of_nodes.append((float(coord['lon']), float(coord['lat'])))
 
+            if len(list_of_nodes) <= 2:
+                logging.critical('Boundary %s has %d nodes.', id_boundary, len(list_of_nodes))
+                continue
+
             name = None
             ref = None
             for tag in boundary['tag']:
@@ -194,7 +198,7 @@ class GenerateTAZandWeightsFromOSM(object):
                 'buildings_cumul_area': 0,
             }
 
-        logging.info('Generaated %d TAZ.', len(self._taz.keys()))
+        logging.info('Generated %d TAZ.', len(self._taz.keys()))
 
     def _taz_areas(self):
         """ Compute the area in "shape" for each TAZ """
