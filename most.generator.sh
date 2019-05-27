@@ -11,16 +11,7 @@
 # exit on error
 set -e
 
-if [ -z "$MOBILITY_GENERATOR" ]
-then
-    echo "Environment variable MOBILITY_GENERATOR is not set."
-    echo "Please set MOBILITY_GENERATOR to the root directory."
-    echo "Bash example:"
-    echo "      in MoSTScenario exec"
-    echo '      export MOBILITY_GENERATOR=$(pwd)'
-    exit
-fi
-
+MOBILITY_GENERATOR=$(pwd)
 SCENARIO="$MOBILITY_GENERATOR/MoSTScenario/scenario"
 MOBILITY_TOOLS="$MOBILITY_GENERATOR/MoSTScenario/tools/mobility"
 
