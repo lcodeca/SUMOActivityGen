@@ -27,14 +27,13 @@ import numpy
 from numpy.random import RandomState
 from tqdm import tqdm
 
-# """ Import SUMOLIB """
-if 'SUMO_TOOLS' in os.environ:
-    sys.path.append(os.environ['SUMO_TOOLS'])
+if 'SUMO_HOME' in os.environ:
+    sys.path.append(os.path.join(os.environ['SUMO_HOME'], 'tools'))
     import sumolib
     import traci
     import traci.constants as tc
 else:
-    sys.exit("Please declare environment variable 'SUMO_TOOLS'")
+    sys.exit("please declare environment variable 'SUMO_HOME'")
 
 BASE_DIR = None
 if 'MOBILITY_GENERATOR' in os.environ:
@@ -42,24 +41,17 @@ if 'MOBILITY_GENERATOR' in os.environ:
 else:
     sys.exit("Please declare environment variable 'MOBILITY_GENERATOR'")
 
-def _logs():
+def logs():
     """ Log init. """
-    file_handler = logging.FileHandler(filename='{}.log'.format(sys.argv[0]),
-                                       mode='w')
     stdout_handler = logging.StreamHandler(sys.stdout)
-    handlers = [file_handler, stdout_handler]
-    logging.basicConfig(handlers=handlers, level=logging.INFO,
+    logging.basicConfig(handlers=[stdout_handler], level=logging.INFO,
                         format='[%(asctime)s] %(levelname)s: %(message)s',
                         datefmt='%m/%d/%Y %I:%M:%S %p')
 
-def _args():
-    """
-    Argument Parser
-    ret: parsed arguments.
-    """
+def get_options(cmd_args):
+    """ Argument Parser. """
     parser = argparse.ArgumentParser(
-        prog='{}'.format(sys.argv[0]),
-        usage='%(prog)s -c configuration.json',
+        prog='activitygen.py', usage='%(prog)s -c configuration.json',
         description='SUMO Activity-Based Mobility Generator')
     parser.add_argument(
         '-c', type=str, dest='config', required=True,
@@ -71,7 +63,7 @@ def _args():
         '--no-profiling', dest='profiling', action='store_false',
         help='Disable Python3 cProfile feature.')
     parser.set_defaults(profiling=False)
-    return parser.parse_args()
+    return parser.parse_args(cmd_args)
 
 def _load_configurations(filename):
     """
@@ -248,7 +240,7 @@ class MobilityGenerator(object):
         xml_tree = xml.etree.ElementTree.parse(filename).getroot()
         for child in xml_tree:
             if (child.tag == 'parkingArea' and
-                    child.attrib['id'] in self._conf['intermodalOptions']['parkingAreaWhitelist']):
+                child.attrib['id'] not in self._conf['intermodalOptions']['parkingAreaBlacklist']):
                 edge = child.attrib['lane'].split('_')[0]
                 position = float(child.attrib['startPos']) + 2.5
                 self._sumo_parkings[edge].append(child.attrib['id'])
@@ -450,7 +442,7 @@ class MobilityGenerator(object):
 
         for p_edge, parkings in self._sumo_parkings.items():
             for parking in parkings:
-                if parking in self._conf['intermodalOptions']['parkingAreaWhitelist']:
+                if parking not in self._conf['intermodalOptions']['parkingAreaBlacklist']:
                     p_id = parking
                     break
             if p_id:
@@ -1257,10 +1249,10 @@ class MobilityGenerator(object):
                 tripfile.write(self.ROUTES_TPL.format(trips=all_trips))
             logging.info('Saved %s', filename)
 
-def _main():
+def main(cmd_args):
     """ Person Trip Activity-based Mobility Generation with PoIs and TAZ. """
 
-    args = _args()
+    args = get_options(cmd_args)
 
     ## ========================              PROFILER              ======================== ##
     if args.profiling:
@@ -1287,5 +1279,5 @@ def _main():
     logging.info('Done.')
 
 if __name__ == "__main__":
-    _logs()
-    _main()
+    logs()
+    main(sys.argv[1:])
