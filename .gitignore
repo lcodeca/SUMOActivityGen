@@ -1,6 +1,10 @@
 # Testing
 MoSTScenario
+random_grid
 sim
+.DS_Store
+setenv.sh
+Test_*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
