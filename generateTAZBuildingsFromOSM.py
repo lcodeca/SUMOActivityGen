@@ -202,7 +202,6 @@ class GenerateTAZandWeightsFromOSM(object):
 
     def _taz_areas(self):
         """ Compute the area in "shape" for each TAZ """
-
         for id_taz in tqdm(self._taz.keys()):
             x_coords, y_coords = self._taz[id_taz]['convex_hull'].exterior.coords.xy
             length = len(x_coords)
@@ -220,6 +219,13 @@ class GenerateTAZandWeightsFromOSM(object):
                 for id_taz in list(self._taz.keys()):
                     if self._taz[id_taz]['convex_hull'].contains(geometry.Point(lon, lat)):
                         self._taz[id_taz]['edges'].add(edge.getID())
+        empty_taz = set()
+        for id_taz in self._taz.keys():
+            if not self._taz[id_taz]['edges']:
+                empty_taz.add(id_taz)
+        for id_taz in empty_taz:
+            del self._taz[id_taz]
+        logging.info('Saved %d TAZ after the edges filtering.', len(self._taz.keys()))
 
     def _nodes_filter(self):
         """ Sort nodes to the right TAZ """
@@ -241,7 +247,6 @@ class GenerateTAZandWeightsFromOSM(object):
 
     def _filter_buildings_from_osm(self):
         """ Extract buildings from OSM structure. """
-
         for way in tqdm(self._osm['way']):
             if not self._is_building(way):
                 continue
