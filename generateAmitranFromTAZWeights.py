@@ -40,6 +40,8 @@ def get_options(cmd_args=None):
                         help='Weighted TAZ file (CSV).')
     parser.add_argument('--out', type=str, dest='output', required=True,
                         help='OD matrix in Amitran format.')
+    parser.add_argument('--density', type=float, dest='density', default=3000.0,
+                        help='Average population density in square kilometers.')
     return parser.parse_args(cmd_args)
 
 class AmitranFromTAZWeightsGenerator(object):
@@ -69,21 +71,20 @@ class AmitranFromTAZWeightsGenerator(object):
                         header[1]: row[1],
                         header[2]: int(row[2]),
                         header[3]: float(row[3]),
-                        'weight': (float(row[3])/int(row[2])),
                     }
 
     def _generate_odpairs_from_taz(self):
         """ Generate all the possible OD pairs. """
         for origin, taz_orig in self._taz_weights.items():
-            for destination, taz_dest in self._taz_weights.items():
+            for destination, _ in self._taz_weights.items():
                 if origin == destination:
                     continue
+                amount = self._options.density * taz_orig['Area'] / 1e6 # from mq to square kmq
                 self._odpairs.append({
                     'origin': origin,
                     'destination': destination,
-                    'amount': round(taz_orig['weight'] + taz_dest['weight'], 0)
+                    'amount': round(amount, 0)
                 })
-
 
     AMITRAN_TPL = """<demand xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://sumo.dlr.de/xsd/amitran/od.xsd">
     <actorConfig id="0">
