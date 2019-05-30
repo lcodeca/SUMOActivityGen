@@ -85,7 +85,8 @@ class ActivitygenDefaultGenerator(object):
             }
 
         self._config_struct['slices'].pop('default', None)
-        self._config_struct['population']['entities'] = int(population)
+        _entities = min(self._config_struct['population']['entities'], int(population))
+        self._config_struct['population']['entities'] = _entities
 
     def _generate_taz(self):
         """ Generate TAZ from Amitran definition. """
