@@ -14,8 +14,8 @@
 
     <input>
         <net-file value="osm.net.xml"/>
-        <route-files value="osm_pt.rou.xml"/>
-        <additional-files value="osm_stops.add.xml,osm_complete_parking_areas.add.xml,osm_parking_rerouters.add.xml,basic.vType.xml"/>
+        <route-files value=""/>
+        <additional-files value="osm_polygons.add.xml,osm_stops.add.xml,osm_complete_parking_areas.add.xml,osm_parking_rerouters.add.xml,basic.vType.xml"/>
     </input>
 
     <time>
@@ -47,7 +47,9 @@
     </routing>
 
     <report>
-        <verbose value="false"/>
+        <verbose value="true"/>
+        <duration-log.statistics value="true"/>
+        <no-step-log value="true"/>
     </report>
 
     <random_number>

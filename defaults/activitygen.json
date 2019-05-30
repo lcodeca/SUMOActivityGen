@@ -1,5 +1,6 @@
 {
     "seed": 42,
+    "maxNumTry": 500,
     "outputPrefix": "osm_activitygen.",
 
     "sumocfg": "duarouter.sumocfg",
@@ -12,7 +13,7 @@
 
     "intermodalOptions": {
         "parkingAreaBlacklist": [],
-        "vehicleAllowedParking": ["passenger", "ptw", "evehicle"]
+        "vehicleAllowedParking": ["passenger", "motorcycle", "evehicle"]
     },
 
     "population": {
@@ -86,11 +87,11 @@
             "loc_origin": "TBD",
             "loc_primary": "TBD",
             "activityChains": [
-                [0.2, ["Home", "P-D", "Home"], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["ptw", 0.2], ["on-demand", 0.1]]],
-                [0.2, ["Home", "P-M", "S-S", "P-A", "Home"], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["ptw", 0.2], ["on-demand", 0.1]]],
-                [0.2, ["Home", "P-D", "S-L", "Home"], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["ptw", 0.2], ["on-demand", 0.1]]],
-                [0.2, ["Home", "P-D", "Home", "S-S", "Home"], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["ptw", 0.2], ["on-demand", 0.1]]],
-                [0.2, ["Home", "S-L", "P-A", "Home" ], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["ptw", 0.2], ["on-demand", 0.1]]]
+                [0.2, ["Home", "P-D", "Home"], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["motorcycle", 0.2], ["on-demand", 0.1]]],
+                [0.2, ["Home", "P-M", "S-S", "P-A", "Home"], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["motorcycle", 0.2], ["on-demand", 0.1]]],
+                [0.2, ["Home", "P-D", "S-L", "Home"], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["motorcycle", 0.2], ["on-demand", 0.1]]],
+                [0.2, ["Home", "P-D", "Home", "S-S", "Home"], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["motorcycle", 0.2], ["on-demand", 0.1]]],
+                [0.2, ["Home", "S-L", "P-A", "Home" ], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["motorcycle", 0.2], ["on-demand", 0.1]]]
             ]
         }
     },
