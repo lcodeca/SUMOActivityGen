@@ -1,5 +1,6 @@
 {
     "seed": 42,
+    "maxNumTry": 500,
     "outputPrefix": "rou/most.example.",
 
     "sumocfg": "most.duarouter.sumocfg",
