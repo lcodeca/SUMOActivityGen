@@ -75,6 +75,7 @@ class GenerateTAZandWeightsFromOSM(object):
     }
 
     _taz = dict()
+    _all_in_one = False
 
     def __init__(self, osm, net):
 
@@ -198,7 +199,25 @@ class GenerateTAZandWeightsFromOSM(object):
                 'buildings_cumul_area': 0,
             }
 
-        logging.info('Generated %d TAZ.', len(self._taz.keys()))
+        logging.info('Generated %d TAZ from OSM boundaries.', len(self._taz.keys()))
+
+        if not self._taz:
+            ## Generate only one taz with everything in it.
+            list_of_nodes = []
+            for node in self._osm_boundaries['node'].values():
+                if node:
+                    list_of_nodes.append((float(node['lon']), float(node['lat'])))
+            self._taz['all'] = {
+                'name': 'all',
+                'ref': 'all',
+                'convex_hull': geometry.MultiPoint(list_of_nodes).convex_hull,
+                'raw_points': geometry.MultiPoint(list_of_nodes),
+                'edges': set(),
+                'nodes': set(),
+                'buildings': set(),
+                'buildings_cumul_area': 0,
+            }
+            logging.info('Generated 1 TAZ containing everything.')
 
     def _taz_areas(self):
         """ Compute the area in "shape" for each TAZ """
@@ -213,15 +232,19 @@ class GenerateTAZandWeightsFromOSM(object):
 
     def _edges_filter(self):
         """ Sort edges to the right TAZ """
+
         for edge in tqdm(self._net.getEdges()):
-            for coord in edge.getShape():
-                lon, lat = self._net.convertXY2LonLat(coord[0], coord[1])
-                for id_taz in list(self._taz.keys()):
-                    if self._taz[id_taz]['convex_hull'].contains(geometry.Point(lon, lat)):
-                        self._taz[id_taz]['edges'].add(edge.getID())
+            if self._all_in_one:
+                self._taz['all']['edges'].add(edge.getID())
+            else:
+                for coord in edge.getShape():
+                    lon, lat = self._net.convertXY2LonLat(coord[0], coord[1])
+                    for id_taz in list(self._taz.keys()):
+                        if self._taz[id_taz]['convex_hull'].contains(geometry.Point(lon, lat)):
+                            self._taz[id_taz]['edges'].add(edge.getID())
         empty_taz = set()
-        for id_taz in self._taz.keys():
-            if not self._taz[id_taz]['edges']:
+        for id_taz, taz in self._taz.items():
+            if not taz['edges']:
                 empty_taz.add(id_taz)
         for id_taz in empty_taz:
             del self._taz[id_taz]
@@ -230,10 +253,13 @@ class GenerateTAZandWeightsFromOSM(object):
     def _nodes_filter(self):
         """ Sort nodes to the right TAZ """
         for node in tqdm(self._osm['node']):
-            for id_taz in list(self._taz.keys()):
-                if self._taz[id_taz]['convex_hull'].contains(
-                        geometry.Point(float(node['lon']), float(node['lat']))):
-                    self._taz[id_taz]['nodes'].add(node['id'])
+            if self._all_in_one:
+                self._taz['all']['nodes'].add(node['id'])
+            else:
+                for id_taz in list(self._taz.keys()):
+                    if self._taz[id_taz]['convex_hull'].contains(
+                            geometry.Point(float(node['lon']), float(node['lat']))):
+                        self._taz[id_taz]['nodes'].add(node['id'])
 
     @staticmethod
     def _is_building(way):
@@ -300,11 +326,14 @@ class GenerateTAZandWeightsFromOSM(object):
 
         converted_approximation = transform(proj, approx)
 
+        area = 0.0
+        if not numpy.isnan(converted_approximation.area):
+            area = converted_approximation.area
         self._osm_buildings['way'][way['id']]['tag'].append({
             'k':  'approx_area',
-            'v':  converted_approximation.area
+            'v':  area
             })
-        return converted_approximation.area
+        return area
 
     def _building_to_edge(self, coords, id_taz):
         """ Given the coords of a building, return te closest edge """
@@ -347,21 +376,31 @@ class GenerateTAZandWeightsFromOSM(object):
 
             ## compute the approximated area
             area = int(self._get_approx_area(way))
+            if area == -1:
+                ## there have been problems with the building conversion
+                continue
 
-            for id_taz in list(self._taz.keys()):
-                if self._taz[id_taz]['convex_hull'].contains(
-                        geometry.Point(float(lon), float(lat))):
-                    generic_edge, pedestrian_edge = self._building_to_edge(
-                        self._net.convertLonLat2XY(lon, lat), id_taz)
-                    if generic_edge or pedestrian_edge:
-                        gen_id = None
-                        ped_id = None
-                        if generic_edge:
-                            gen_id = generic_edge.getID()
-                        if pedestrian_edge:
-                            ped_id = pedestrian_edge.getID()
-                        self._taz[id_taz]['buildings'].add((way['id'], area, gen_id, ped_id))
-                        self._taz[id_taz]['buildings_cumul_area'] += area
+            if self._all_in_one:
+                self._add_building_to_taz('all', way['id'], area, lat, lon)
+            else:
+                for id_taz in list(self._taz.keys()):
+                    if self._taz[id_taz]['convex_hull'].contains(
+                            geometry.Point(float(lon), float(lat))):
+                        self._add_building_to_taz(id_taz, way['id'], area, lat, lon)
+
+    def _add_building_to_taz(self, id_taz, id_way, area, lat, lon):
+        """ Adds a building to the specific TAZ. """
+        generic_edge, pedestrian_edge = self._building_to_edge(
+            self._net.convertLonLat2XY(lon, lat), id_taz)
+        if generic_edge or pedestrian_edge:
+            gen_id = None
+            ped_id = None
+            if generic_edge:
+                gen_id = generic_edge.getID()
+            if pedestrian_edge:
+                ped_id = pedestrian_edge.getID()
+            self._taz[id_taz]['buildings'].add((id_way, area, gen_id, ped_id))
+            self._taz[id_taz]['buildings_cumul_area'] += area
 
     _TAZS = """
 <tazs> {list_of_tazs}
@@ -394,6 +433,8 @@ class GenerateTAZandWeightsFromOSM(object):
                 csvwriter = csv.writer(csvfile, delimiter=',')
                 csvwriter.writerow(['TAZ', 'Poly', 'Area', 'Weight', 'GenEdge', 'PedEdge'])
                 for poly, area, g_edge, p_edge in value['buildings']:
+                    if not value['buildings_cumul_area']:
+                        continue
                     csvwriter.writerow([value['ref'], poly, area,
                                         area/value['buildings_cumul_area'], g_edge, p_edge])
 
