@@ -75,9 +75,10 @@ class AmitranFromTAZWeightsGenerator(object):
 
     def _generate_odpairs_from_taz(self):
         """ Generate all the possible OD pairs. """
+        _single_taz = (len(self._taz_weights) == 1)
         for origin, taz_orig in self._taz_weights.items():
             for destination, _ in self._taz_weights.items():
-                if origin == destination:
+                if origin == destination and not _single_taz:
                     continue
                 amount = self._options.density * taz_orig['Area'] / 1e6 # from mq to square kmq
                 self._odpairs.append({
