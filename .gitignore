@@ -5,6 +5,7 @@ sim
 .DS_Store
 setenv.sh
 Test_*
+*.xmind
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
