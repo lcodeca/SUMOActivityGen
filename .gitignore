@@ -1,10 +1,16 @@
+# Under development
+random-grid
+rndgrid.activitygen.json
+examples
+
 # Testing
-MoSTScenario
-random_grid
-sim
-.DS_Store
 setenv.sh
+MoSTScenario
+sim
 Test_*
+
+#Other
+.DS_Store
 *.xmind
 
 # Byte-compiled / optimized / DLL files
