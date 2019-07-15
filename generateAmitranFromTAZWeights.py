@@ -80,11 +80,15 @@ class AmitranFromTAZWeightsGenerator(object):
             for destination, _ in self._taz_weights.items():
                 if origin == destination and not _single_taz:
                     continue
-                amount = self._options.density * taz_orig['Area'] / 1e6 # from mq to square kmq
+                amount = round(
+                    self._options.density * taz_orig['Area'] / 1e6,     # from mq to square kmq
+                    0)
+                if amount <= 0:
+                    continue
                 self._odpairs.append({
                     'origin': origin,
                     'destination': destination,
-                    'amount': round(amount, 0)
+                    'amount': amount,
                 })
 
     AMITRAN_TPL = """<demand xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://sumo.dlr.de/xsd/amitran/od.xsd">
