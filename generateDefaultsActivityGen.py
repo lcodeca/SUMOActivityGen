@@ -76,9 +76,12 @@ class ActivitygenDefaultGenerator(object):
             population += float(odpair['amount'])
 
         for odpair in self._amitran_struct:
+            perc = round(float(odpair['amount']) / population, 4)
+            if perc <= 0:
+                continue
             slice_name = '{}_{}'.format(odpair['origin'], odpair['destination'])
             self._config_struct['slices'][slice_name] = {
-                'perc': round(float(odpair['amount']) / population, 4),
+                'perc': perc,
                 'loc_origin': odpair['origin'],
                 'loc_primary': odpair['destination'],
                 'activityChains': self._config_struct['slices']['default']['activityChains'],
