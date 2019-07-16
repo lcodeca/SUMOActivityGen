@@ -226,6 +226,7 @@ def main(cmd_args):
 
     os.makedirs(args.out_dir, exist_ok=True)
     shutil.copy(args.osm_file, args.out_dir)
+    args.osm_file = os.path.basename(args.osm_file)
     shutil.copy('defaults/activitygen.json', args.out_dir)
     shutil.copy('defaults/basic.vType.xml', args.out_dir)
     shutil.copy('defaults/duarouter.sumocfg', args.out_dir)
