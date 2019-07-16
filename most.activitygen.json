@@ -1,7 +1,8 @@
 {
     "seed": 42,
-    "maxNumTry": 500,
+    "maxNumTry": 10,
     "outputPrefix": "rou/most.example.",
+    "mergeRoutesFiles": false,
 
     "sumocfg": "most.duarouter.sumocfg",
 
@@ -13,7 +14,8 @@
 
     "intermodalOptions": {
         "parkingAreaBlacklist": [],
-        "vehicleAllowedParking": ["passenger", "ptw", "evehicle"]
+        "vehicleAllowedParking": ["passenger", "ptw", "evehicle"],
+        "modeSelection": "PROBABILITY"
     },
 
     "population": {
@@ -21,8 +23,7 @@
         "tazDefinition": "MoSTScenario/tools/mobility/taz/most.complete.taz.xml",
         "tazWeights": "MoSTScenario/tools/mobility/taz/most.complete.taz.weight.csv",
         "buildingsWeight": "MoSTScenario/tools/mobility/taz/buildings/",
-        "PoIsDefinition": "TBD",
-        "modeSelection": "PROBABILITY"
+        "PoIsDefinition": "TBD"
     },
 
     "taz": {
@@ -94,11 +95,11 @@
             "loc_origin": "FranceArea3",
             "loc_primary": "MonacoArea1Generic",
             "activityChains": [
-                [0.2, ["Home", "P-D", "Home"], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["ptw", 0.2], ["on-demand", 0.1]]],
-                [0.2, ["Home", "P-M", "S-S", "P-A", "Home"], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["ptw", 0.2], ["on-demand", 0.1]]],
-                [0.2, ["Home", "P-D", "S-L", "Home"], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["ptw", 0.2], ["on-demand", 0.1]]],
-                [0.2, ["Home", "P-D", "Home", "S-S", "Home"], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["ptw", 0.2], ["on-demand", 0.1]]],
-                [0.2, ["Home", "S-L", "P-A", "Home" ], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["ptw", 0.2], ["on-demand", 0.1]]]
+                [0.2, ["Home", "P-D", "Home"], [["passenger", 0.5], ["ptw", 0.3], ["on-demand", 0.2]]],
+                [0.2, ["Home", "P-M", "S-S", "P-A", "Home"], [["passenger", 0.5], ["ptw", 0.3], ["on-demand", 0.2]]],
+                [0.2, ["Home", "P-D", "S-L", "Home"], [["passenger", 0.5], ["ptw", 0.3], ["on-demand", 0.2]]],
+                [0.2, ["Home", "P-D", "Home", "S-S", "Home"], [["passenger", 0.5], ["ptw", 0.3], ["on-demand", 0.2]]],
+                [0.2, ["Home", "S-L", "P-A", "Home" ], [["passenger", 0.5], ["ptw", 0.3], ["on-demand", 0.2]]]
             ]
         },
         "2to1": {
@@ -106,11 +107,11 @@
             "loc_origin": "FranceArea2",
             "loc_primary": "MonacoArea1Generic",
             "activityChains": [
-                [0.2, ["Home", "P-D", "Home"], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["ptw", 0.2], ["on-demand", 0.1]]],
-                [0.2, ["Home", "P-M", "S-S", "P-A", "Home"], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["ptw", 0.2], ["on-demand", 0.1]]],
-                [0.2, ["Home", "P-D", "S-L", "Home"], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["ptw", 0.2], ["on-demand", 0.1]]],
-                [0.2, ["Home", "P-D", "Home", "S-S", "Home"], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["ptw", 0.2], ["on-demand", 0.1]]],
-                [0.2, ["Home", "S-L", "P-A", "Home" ], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["ptw", 0.2], ["on-demand", 0.1]]]
+                [0.2, ["Home", "P-D", "Home"], [["public", 0.25], ["passenger", 0.25], ["ptw", 0.25], ["on-demand", 0.25]]],
+                [0.2, ["Home", "P-M", "S-S", "P-A", "Home"], [["public", 0.25], ["passenger", 0.25], ["ptw", 0.25], ["on-demand", 0.25]]],
+                [0.2, ["Home", "P-D", "S-L", "Home"], [["public", 0.25], ["passenger", 0.25], ["ptw", 0.25], ["on-demand", 0.25]]],
+                [0.2, ["Home", "P-D", "Home", "S-S", "Home"], [["public", 0.25], ["passenger", 0.25], ["ptw", 0.25], ["on-demand", 0.25]]],
+                [0.2, ["Home", "S-L", "P-A", "Home" ], [["public", 0.25], ["passenger", 0.25], ["ptw", 0.25], ["on-demand", 0.25]]]
             ]
         },
         "1to2": {
@@ -118,11 +119,11 @@
             "loc_origin": "MonacoArea1Generic",
             "loc_primary": "FranceArea2",
             "activityChains": [
-                [0.2, ["Home", "P-D", "Home"], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["ptw", 0.2], ["on-demand", 0.1]]],
-                [0.2, ["Home", "P-M", "S-S", "P-A", "Home"], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["ptw", 0.2], ["on-demand", 0.1]]],
-                [0.2, ["Home", "P-D", "S-L", "Home"], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["ptw", 0.2], ["on-demand", 0.1]]],
-                [0.2, ["Home", "P-D", "Home", "S-S", "Home"], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["ptw", 0.2], ["on-demand", 0.1]]],
-                [0.2, ["Home", "S-L", "P-A", "Home" ], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["ptw", 0.2], ["on-demand", 0.1]]]
+                [0.2, ["Home", "P-D", "Home"], [["public", 0.25], ["passenger", 0.25], ["ptw", 0.25], ["on-demand", 0.25]]],
+                [0.2, ["Home", "P-M", "S-S", "P-A", "Home"], [["public", 0.25], ["passenger", 0.25], ["ptw", 0.25], ["on-demand", 0.25]]],
+                [0.2, ["Home", "P-D", "S-L", "Home"], [["public", 0.25], ["passenger", 0.25], ["ptw", 0.25], ["on-demand", 0.25]]],
+                [0.2, ["Home", "P-D", "Home", "S-S", "Home"], [["public", 0.25], ["passenger", 0.25], ["ptw", 0.25], ["on-demand", 0.25]]],
+                [0.2, ["Home", "S-L", "P-A", "Home" ], [["public", 0.25], ["passenger", 0.25], ["ptw", 0.25], ["on-demand", 0.25]]]
             ]
         },
         "1to1": {
@@ -130,11 +131,11 @@
             "loc_origin": "MonacoArea1Detailed",
             "loc_primary": "MonacoArea1Detailed",
             "activityChains": [
-                [0.2, ["Home", "P-D", "Home"], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["ptw", 0.2], ["on-demand", 0.1]]],
-                [0.2, ["Home", "P-M", "S-S", "P-A", "Home"], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["ptw", 0.2], ["on-demand", 0.1]]],
-                [0.2, ["Home", "P-D", "S-L", "Home"], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["ptw", 0.2], ["on-demand", 0.1]]],
-                [0.2, ["Home", "P-D", "Home", "S-S", "Home"], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["ptw", 0.2], ["on-demand", 0.1]]],
-                [0.2, ["Home", "S-L", "P-A", "Home" ], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["ptw", 0.2], ["on-demand", 0.1]]]
+                [0.2, ["Home", "P-D", "Home"], [["public", 0.2], ["bicycle", 0.2], ["passenger", 0.2], ["ptw", 0.2], ["on-demand", 0.2]]],
+                [0.2, ["Home", "P-M", "S-S", "P-A", "Home"], [["public", 0.2], ["bicycle", 0.2], ["passenger", 0.2], ["ptw", 0.2], ["on-demand", 0.2]]],
+                [0.2, ["Home", "P-D", "S-L", "Home"], [["public", 0.2], ["bicycle", 0.2], ["passenger", 0.2], ["ptw", 0.2], ["on-demand", 0.2]]],
+                [0.2, ["Home", "P-D", "Home", "S-S", "Home"], [["public", 0.2], ["bicycle", 0.2], ["passenger", 0.2], ["ptw", 0.2], ["on-demand", 0.2]]],
+                [0.2, ["Home", "S-L", "P-A", "Home" ], [["public", 0.2], ["bicycle", 0.2], ["passenger", 0.2], ["ptw", 0.2], ["on-demand", 0.2]]]
             ]
         }
     },

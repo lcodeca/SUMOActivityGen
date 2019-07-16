@@ -15,7 +15,6 @@
     <input>
         <net-file value="MoSTScenario/scenario/in/most.net.xml"/>
         <route-files value="rou/most.example.buses.flows.xml,rou/most.example.trains.flows.xml,rou/most.example.3to1.rou.xml,rou/most.example.2to1.rou.xml,rou/most.example.1to2.rou.xml,rou/most.example.1to1.rou.xml"/>
-        <!-- <route-files value="rou/most.example.rou.xml"/> -->
         <additional-files value="MoSTScenario/scenario/in/add/most.busstops.add.xml,MoSTScenario/scenario/in/add/most.trainstops.add.xml,MoSTScenario/scenario/in/add/most.parking.add.xml,MoSTScenario/scenario/in/add/basic.vType.xml"/>
     </input>
 
