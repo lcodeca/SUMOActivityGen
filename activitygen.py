@@ -1331,7 +1331,7 @@ class MobilityGenerator(object):
             all_trips = ''
             for time in sorted(merged_trips.keys()):
                 for person in merged_trips[time]:
-                    all_trips += person['string']
+                    all_trips += person
 
             tripfile.write(self.ROUTES_TPL.format(trips=all_trips))
             logging.info('Saved %s', filename)
