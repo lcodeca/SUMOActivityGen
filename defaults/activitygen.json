@@ -1,7 +1,8 @@
 {
     "seed": 42,
-    "maxNumTry": 500,
+    "maxNumTry": 10,
     "outputPrefix": "osm_activitygen.",
+    "mergeRoutesFiles": true,
 
     "sumocfg": "duarouter.sumocfg",
 
@@ -13,7 +14,8 @@
 
     "intermodalOptions": {
         "parkingAreaBlacklist": [],
-        "vehicleAllowedParking": ["passenger", "motorcycle", "evehicle"]
+        "vehicleAllowedParking": ["passenger", "motorcycle", "evehicle"],
+        "modeSelection": "PROBABILITY"
     },
 
     "population": {
@@ -21,8 +23,7 @@
         "tazDefinition": "osm_taz.xml",
         "tazWeights": "osm_taz_weight.csv",
         "buildingsWeight": "buildings/",
-        "PoIsDefinition": "TBD",
-        "modeSelection": "PROBABILITY"
+        "PoIsDefinition": "TBD"
     },
 
     "taz": {},
@@ -87,11 +88,11 @@
             "loc_origin": "TBD",
             "loc_primary": "TBD",
             "activityChains": [
-                [0.2, ["Home", "P-D", "Home"], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["motorcycle", 0.2], ["on-demand", 0.1]]],
-                [0.2, ["Home", "P-M", "S-S", "P-A", "Home"], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["motorcycle", 0.2], ["on-demand", 0.1]]],
-                [0.2, ["Home", "P-D", "S-L", "Home"], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["motorcycle", 0.2], ["on-demand", 0.1]]],
-                [0.2, ["Home", "P-D", "Home", "S-S", "Home"], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["motorcycle", 0.2], ["on-demand", 0.1]]],
-                [0.2, ["Home", "S-L", "P-A", "Home" ], [["public", 0.3], ["bicycle", 0.1], ["passenger", 0.3], ["motorcycle", 0.2], ["on-demand", 0.1]]]
+                [0.2, ["Home", "P-D", "Home"], [["public", 0.2], ["bicycle", 0.2], ["passenger", 0.2], ["motorcycle", 0.2], ["on-demand", 0.2]]],
+                [0.2, ["Home", "P-M", "S-S", "P-A", "Home"], [["public", 0.2], ["bicycle", 0.2], ["passenger", 0.2], ["motorcycle", 0.2], ["on-demand", 0.2]]],
+                [0.2, ["Home", "P-D", "S-L", "Home"], [["public", 0.2], ["bicycle", 0.2], ["passenger", 0.2], ["motorcycle", 0.2], ["on-demand", 0.2]]],
+                [0.2, ["Home", "P-D", "Home", "S-S", "Home"], [["public", 0.2], ["bicycle", 0.2], ["passenger", 0.2], ["motorcycle", 0.2], ["on-demand", 0.2]]],
+                [0.2, ["Home", "S-L", "P-A", "Home" ], [["public", 0.2], ["bicycle", 0.2], ["passenger", 0.2], ["motorcycle", 0.2], ["on-demand", 0.2]]]
             ]
         }
     },
