@@ -19,7 +19,7 @@
     },
 
     "population": {
-        "entities" : 10000,
+        "entities" : 0,
         "tazDefinition": "osm_taz.xml",
         "tazWeights": "osm_taz_weight.csv",
         "buildingsWeight": "buildings/",

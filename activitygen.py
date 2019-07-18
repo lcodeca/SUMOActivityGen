@@ -344,7 +344,7 @@ class MobilityGenerator(object):
                 _final_chain = None
                 _stages = None
                 _error_counter = 0
-                while not _person_trip and _error_counter <= self._max_retry_number:
+                while not _person_trip and _error_counter < self._max_retry_number:
                     try:
                         _final_chain, _stages, _selected_mode = self._generate_trip(
                             self._conf['taz'][m_slice['loc_origin']],
@@ -532,7 +532,7 @@ class MobilityGenerator(object):
                     modes=_mode, pType=_ptype, vType=_vtype)
                 if not self._is_valid_route(mode, route):
                     route = None
-                if route:
+                if _mode != 'public' and route:
                     ## Check if the route is connected
                     _last_final = None
                     for step in route:
@@ -581,7 +581,7 @@ class MobilityGenerator(object):
         for mode, weight in _interpr_modes:
             _person_steps = None
             _error_counter = 0
-            while not _person_steps and _error_counter <= self._max_retry_number:
+            while not _person_steps and _error_counter < self._max_retry_number:
                 try:
                     _person_steps, _person_stages = self._generate_mode_traci(
                         from_area, to_area, activity_chain, mode)
@@ -630,7 +630,7 @@ class MobilityGenerator(object):
         from_edge = None
         to_edge = None
         _retry_counter = 0
-        while not route and _retry_counter <= self._max_retry_number:
+        while not route and _retry_counter < self._max_retry_number:
             _retry_counter += 1
             ## Origin and Destination Selection
             from_edge, to_edge = self._select_pair(from_area, to_area)
