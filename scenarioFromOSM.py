@@ -53,6 +53,11 @@ def get_options(cmd_args=None):
         '--out', type=str, dest='out_dir', required=True,
         help='Directory for all the output files.')
     parser.add_argument(
+        '--population', type=int, dest='population', default=1000,
+        help='Number of people plans to generate.')
+    parser.add_argument('--density', type=float, dest='density', default=3000.0,
+                        help='Average population density in square kilometers.')
+    parser.add_argument(
         '--profiling', dest='profiling', action='store_true',
         help='Enable Python3 cProfile feature.')
     parser.add_argument(
@@ -175,18 +180,19 @@ def _call_generate_taz_buildings_from_osm(filename):
                              '--poly-output', DEFAULT_BUILDINGS_PREFIX]
     generateTAZBuildingsFromOSM.main(taz_buildings_options)
 
-def _call_generate_amitran_from_taz_weights():
+def _call_generate_amitran_from_taz_weights(density):
     """ Call directly generateAmitranFromTAZWeights from SUMOActivityGen. """
     odmatrix_options = ['--taz-weights', DEFAULT_OD_OUTPUT_CSV,
                         '--out', DEFAULT_ODMATRIX_AMITRAN_XML,
-                        '--density', '3000.0']
+                        '--density', str(density)]
     generateAmitranFromTAZWeights.main(odmatrix_options)
 
-def _call_generate_defaults_activitygen():
+def _call_generate_defaults_activitygen(population):
     """ Call directly generateDefaultsActivityGen from SUMOActivityGen. """
     default_options = ['--conf', DEAFULT_GENERIC_AG_CONG,
                        '--od-amitran', DEFAULT_ODMATRIX_AMITRAN_XML,
-                       '--out', DEAFULT_SPECIFIC_AG_CONG]
+                       '--out', DEAFULT_SPECIFIC_AG_CONG,
+                       '--population', str(population)]
     generateDefaultsActivityGen.main(default_options)
 
 def _call_activitygen():
@@ -259,8 +265,8 @@ def main(cmd_args):
     _call_generate_taz_buildings_from_osm(args.osm_file)
 
     logging.info('Generate the default values for the activity based mobility generator. ')
-    _call_generate_amitran_from_taz_weights()
-    _call_generate_defaults_activitygen()
+    _call_generate_amitran_from_taz_weights(args.density)
+    _call_generate_defaults_activitygen(args.population)
 
     logging.info('Mobility generation using SUMOActivityGen.')
     _call_activitygen()
