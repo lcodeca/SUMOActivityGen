@@ -53,6 +53,9 @@ def get_options(cmd_args=None):
                         help='Prefix for the OD output file (CSV).')
     parser.add_argument('--poly-output', type=str, dest='poly_output', required=True,
                         help='Prefix for the POLY output files (CSV).')
+    parser.add_argument('--single-taz', dest='single_taz', action='store_true',
+                        help='Ignore administrative boundaries and generate only one TAZ.')
+    parser.set_defaults(single_taz=False)
     return parser.parse_args(cmd_args)
 
 class GenerateTAZandWeightsFromOSM(object):
@@ -76,10 +79,12 @@ class GenerateTAZandWeightsFromOSM(object):
     _taz = dict()
     _all_in_one = False
 
-    def __init__(self, osm, net):
+    def __init__(self, osm, net, single_taz):
 
         self._osm = osm
         self._net = net
+
+        self._all_in_one = single_taz
 
         logging.info('Filtering administrative boudaries from OSM..')
         self._filter_boundaries_from_osm()
@@ -157,48 +162,49 @@ class GenerateTAZandWeightsFromOSM(object):
     def _build_taz_from_osm(self):
         """ Extract TAZ from OSM boundaries. """
 
-        for id_boundary, boundary in tqdm(self._osm_boundaries['relation'].items()):
+        if not self._all_in_one:
+            for id_boundary, boundary in tqdm(self._osm_boundaries['relation'].items()):
 
-            if not boundary:
-                logging.critical('Empty boundary %s', id_boundary)
-                continue
+                if not boundary:
+                    logging.critical('Empty boundary %s', id_boundary)
+                    continue
 
-            list_of_nodes = []
-            if 'member' in boundary:
-                for member in boundary['member']:
-                    if member['type'] == 'way':
-                        if 'nd' in self._osm_boundaries['way'][member['ref']]:
-                            for node in self._osm_boundaries['way'][member['ref']]['nd']:
-                                coord = self._osm_boundaries['node'][node['ref']]
-                                list_of_nodes.append((float(coord['lon']), float(coord['lat'])))
+                list_of_nodes = []
+                if 'member' in boundary:
+                    for member in boundary['member']:
+                        if member['type'] == 'way':
+                            if 'nd' in self._osm_boundaries['way'][member['ref']]:
+                                for node in self._osm_boundaries['way'][member['ref']]['nd']:
+                                    coord = self._osm_boundaries['node'][node['ref']]
+                                    list_of_nodes.append((float(coord['lon']), float(coord['lat'])))
 
-            if len(list_of_nodes) <= 2:
-                logging.critical('Boundary %s has %d nodes.', id_boundary, len(list_of_nodes))
-                continue
+                if len(list_of_nodes) <= 2:
+                    logging.critical('Boundary %s has %d nodes.', id_boundary, len(list_of_nodes))
+                    continue
 
-            name = None
-            ref = None
-            for tag in boundary['tag']:
-                if tag['k'] == 'name':
-                    name = tag['v']
-                elif tag['k'] == 'ref':
-                    ref = tag['v']
-            if not name:
-                name = id_boundary
-            if not ref:
-                ref = id_boundary
-            self._taz[id_boundary] = {
-                'name': name,
-                'ref': ref,
-                'convex_hull': geometry.MultiPoint(list_of_nodes).convex_hull,
-                'raw_points': geometry.MultiPoint(list_of_nodes),
-                'edges': set(),
-                'nodes': set(),
-                'buildings': set(),
-                'buildings_cumul_area': 0,
-            }
+                name = None
+                ref = None
+                for tag in boundary['tag']:
+                    if tag['k'] == 'name':
+                        name = tag['v']
+                    elif tag['k'] == 'ref':
+                        ref = tag['v']
+                if not name:
+                    name = id_boundary
+                if not ref:
+                    ref = id_boundary
+                self._taz[id_boundary] = {
+                    'name': name,
+                    'ref': ref,
+                    'convex_hull': geometry.MultiPoint(list_of_nodes).convex_hull,
+                    'raw_points': geometry.MultiPoint(list_of_nodes),
+                    'edges': set(),
+                    'nodes': set(),
+                    'buildings': set(),
+                    'buildings_cumul_area': 0,
+                }
 
-        logging.info('Generated %d TAZ from OSM boundaries.', len(self._taz.keys()))
+            logging.info('Generated %d TAZ from OSM boundaries.', len(self._taz.keys()))
 
         if not self._taz:
             ## Generate only one taz with everything in it.
@@ -217,6 +223,7 @@ class GenerateTAZandWeightsFromOSM(object):
                 'buildings_cumul_area': 0,
             }
             logging.info('Generated 1 TAZ containing everything.')
+            self._all_in_one = True
 
     def _taz_areas(self):
         """ Compute the area in "shape" for each TAZ """
@@ -475,7 +482,7 @@ def main(cmd_args):
     osm = _parse_xml_file(args.osm_file)
     net = sumolib.net.readNet(args.net_file)
 
-    taz_generator = GenerateTAZandWeightsFromOSM(osm, net)
+    taz_generator = GenerateTAZandWeightsFromOSM(osm, net, args.single_taz)
     taz_generator.generate_taz()
     taz_generator.save_sumo_taz(args.taz_output)
     taz_generator.save_taz_weigth(args.od_output)

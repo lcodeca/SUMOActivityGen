@@ -68,6 +68,9 @@ def get_options(cmd_args=None):
         '--lefthand', dest='left_hand_traffic', action='store_true',
         help='Generate a left-hand traffic scenario.')
     parser.set_defaults(left_hand_traffic=False)
+    parser.add_argument('--single-taz', dest='single_taz', action='store_true',
+                        help='Ignore administrative boundaries and generate only one TAZ.')
+    parser.set_defaults(single_taz=False)
     return parser.parse_args(cmd_args)
 
 ## netconvert
@@ -171,13 +174,15 @@ def _call_polyconvert(filename):
                            '-o', DEFAULT_POLY_XML]
     subprocess.call(polyconvert_options)
 
-def _call_generate_taz_buildings_from_osm(filename):
+def _call_generate_taz_buildings_from_osm(filename, single_taz):
     """ Call directly generateTAZBuildingsFromOSM from SUMOActivityGen. """
     taz_buildings_options = ['--osm', filename,
                              '--net', DEFAULT_NET_XML,
                              '--taz-output', DEFAULT_TAZ_OUTPUT_XML,
                              '--od-output', DEFAULT_OD_OUTPUT_CSV,
                              '--poly-output', DEFAULT_BUILDINGS_PREFIX]
+    if single_taz:
+        taz_buildings_options.append('--single-taz')
     generateTAZBuildingsFromOSM.main(taz_buildings_options)
 
 def _call_generate_amitran_from_taz_weights(density):
@@ -262,7 +267,7 @@ def main(cmd_args):
     logging.info('Generate TAZ from administrative boundaries, TAZ weights using buildings and '
                  ' PoIs and the buildings infrastructure.')
     os.makedirs('buildings', exist_ok=True)
-    _call_generate_taz_buildings_from_osm(args.osm_file)
+    _call_generate_taz_buildings_from_osm(args.osm_file, args.single_taz)
 
     logging.info('Generate the default values for the activity based mobility generator. ')
     _call_generate_amitran_from_taz_weights(args.density)
