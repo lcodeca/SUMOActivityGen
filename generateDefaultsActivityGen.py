@@ -12,19 +12,8 @@
 import argparse
 import logging
 import json
-import os
 import sys
 import xml.etree.ElementTree
-from tqdm import tqdm
-
-import pprint
-
-if 'SUMO_HOME' in os.environ:
-    sys.path.append(os.path.join(os.environ['SUMO_HOME'], 'tools'))
-    import sumolib
-    from sumolib.miscutils import euclidean
-else:
-    sys.exit("please declare environment variable 'SUMO_HOME'")
 
 def logs():
     """ Log init. """
@@ -44,6 +33,8 @@ def get_options(cmd_args=None):
                         help='OD matrix in Amitran format.')
     parser.add_argument('--out', type=str, dest='output', required=True,
                         help='Output file.')
+    parser.add_argument('--population', type=int, dest='population', default=1000,
+                        help='Population: number of entities to generate.')
     return parser.parse_args(cmd_args)
 
 class ActivitygenDefaultGenerator(object):
@@ -88,8 +79,7 @@ class ActivitygenDefaultGenerator(object):
             }
 
         self._config_struct['slices'].pop('default', None)
-        _entities = min(self._config_struct['population']['entities'], int(population))
-        self._config_struct['population']['entities'] = _entities
+        self._config_struct['population']['entities'] = self._options.population
 
     def _generate_taz(self):
         """ Generate TAZ from Amitran definition. """
