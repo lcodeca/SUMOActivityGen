@@ -149,7 +149,7 @@ class ParkingAreasFromOSMGenerator(object):
 
         edge_info = None
         lane_info = None
-        dist_edge = sys.float_info.max # distance.euclidean(a,b)
+        dist_edge = sys.float_info.max
         location = None
 
         nearest_edges = self._net.getNeighboringEdges(parking['x'], parking['y'], r=1000.0)
