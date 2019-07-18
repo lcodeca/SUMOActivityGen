@@ -28,7 +28,6 @@ from tqdm import tqdm
 if 'SUMO_HOME' in os.environ:
     sys.path.append(os.path.join(os.environ['SUMO_HOME'], 'tools'))
     import sumolib
-    from sumolib.miscutils import euclidean
 else:
     sys.exit("please declare environment variable 'SUMO_HOME'")
 
@@ -341,10 +340,10 @@ class GenerateTAZandWeightsFromOSM(object):
         centroid = coords = (float(coords[0]), float(coords[1]))
 
         pedestrian_edge_info = None
-        pedestrian_dist_edge = sys.float_info.max # distance.euclidean(a,b)
+        pedestrian_dist_edge = sys.float_info.max
 
         generic_edge_info = None
-        generic_dist_edge = sys.float_info.max # distance.euclidean(a,b)
+        generic_dist_edge = sys.float_info.max
 
         for id_edge in self._taz[id_taz]['edges']:
             edge = self._net.getEdge(id_edge)
