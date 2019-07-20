@@ -12,6 +12,7 @@
 import argparse
 import csv
 import logging
+import multiprocessing
 import os
 import sys
 import xml.etree.ElementTree
@@ -373,10 +374,11 @@ class GenerateTAZandWeightsFromOSM(object):
 
         return generic_edge_info, pedestrian_edge_info
 
-    def _sort_buildings(self):
+    def _sort_buildings_into_taz(self, buildings):
         """ Sort buildings to the right TAZ based on centroid. """
+        for building in tqdm(buildings):
+            way = self._osm_buildings['way'][building]
 
-        for _, way in tqdm(self._osm_buildings['way'].items()):
             ## compute the centroid
             lat, lon = self._get_centroid(way)
 
@@ -393,6 +395,19 @@ class GenerateTAZandWeightsFromOSM(object):
                     if self._taz[id_taz]['convex_hull'].contains(
                             geometry.Point(float(lon), float(lat))):
                         self._add_building_to_taz(id_taz, way['id'], area, lat, lon)
+
+    def _sort_buildings(self):
+        """ Multiprocess helper to sort buildings to the right TAZ based on centroid. """
+        splits = numpy.array_split(list(self._osm_buildings['way'].keys()),
+                                   multiprocessing.cpu_count())
+        processes = list()
+        for split in splits:
+            _sorting_process = multiprocessing.Process(target=self._sort_buildings_into_taz,
+                                                       args=(split,))
+            processes.append(_sorting_process)
+            _sorting_process.start()
+        for sorting_process in processes:
+            sorting_process.join()
 
     def _add_building_to_taz(self, id_taz, id_way, area, lat, lon):
         """ Adds a building to the specific TAZ. """
