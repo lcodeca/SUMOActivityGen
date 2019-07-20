@@ -255,13 +255,13 @@ def main(cmd_args):
     if args.from_step <= 0:
         logging.info('Copying default configuration files to destination.')
         shutil.copy(args.osm_file, args.out_dir)
-        args.osm_file = os.path.basename(args.osm_file)
         shutil.copy('defaults/activitygen.json', args.out_dir)
         shutil.copy('defaults/basic.vType.xml', args.out_dir)
         shutil.copy('defaults/duarouter.sumocfg', args.out_dir)
         shutil.copy('defaults/osm.netccfg', args.out_dir)
         shutil.copy('defaults/osm.sumocfg', args.out_dir)
 
+    args.osm_file = os.path.basename(args.osm_file)
     os.chdir(args.out_dir)
 
     if args.from_step <= 1:
