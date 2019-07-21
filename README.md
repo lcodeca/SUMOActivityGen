@@ -17,3 +17,36 @@ This project is in its early stages, and it is still under development.
 
 ### Due to some changes in the SUMO development version of the TraCI APIs, the master branch is not compatible with SUMO 1.2.0
 * _Release v0.1 is compatible with SUMO 1.2.0_
+
+## HOW TO
+
+### Required libraries
+`pip3 install tqdm pyproj numpy shapely matplotlib`
+
+### SUMOActivityGen
+`python3 activitygen.py -c configuration.json`
+
+### Scenario Generation from OSM
+`python3 scenarioFromOSM.py --osm file.osm --out target_directory`
+
+Optional parameters:
+```
+  --lefthand                Generate a left-hand traffic scenario.
+  --population POPULATION   Number of people plans to generate.
+  --density DENSITY         Average population density in square kilometers.
+  --single-taz              Ignore administrative boundaries and generate only one TAZ.
+  --from-step FROM_STEP     For successive iteration of the script,
+                            it defines from which step it should start:
+                            [0 - Copy default files.]
+                            [1 - Run netconvert & polyconvert.]
+                            [2 - Run ptlines2flows.py.]
+                            [3 - Generate parking areas.]
+                            [4 - Generate parking area rerouters.]
+                            [5 - Extract TAZ from administrative boundaries.]
+                            [6 - Generate OD-matrix.]
+                            [7 - Generate SUMOActivityGen defaults.]
+                            [8 - Run SUMOActivityGen.]
+                            [9 - Launch SUMO.]
+  --profiling               Enable Python3 cProfile feature.
+  --no-profiling            [default] Disable Python3 cProfile feature.
+```
