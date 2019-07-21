@@ -157,34 +157,15 @@ class ParkingAreasFromOSMGenerator(object):
         for edge, _ in nearest_edges:
             if not (edge.allows('passenger') and edge.allows('pedestrian')):
                 continue
-
             if self._is_too_short(edge.getLength()):
                 continue
-
-            stop_lane = None
-            index = 0
-            while not stop_lane:
-                try:
-                    stop_lane = edge.getLane(index)
-                    if not stop_lane.allows('passenger'):
-                        stop_lane = None
-                        index += 1
-                except IndexError:
-                    stop_lane = None
-                    break
-
-
-            if stop_lane:
-                # compute all the distances
-                counter = 0
-                for point in stop_lane.getShape():
-                    dist = euclidean((float(parking['x']), float(parking['y'])), point)
-                    if dist < dist_edge:
-                        edge_info = edge
-                        lane_info = stop_lane
-                        dist_edge = dist
-                        location = counter
-                    counter += 1
+            index, pos, dist = edge.getClosestLanePosDist((float(parking['x']),
+                                                           float(parking['y'])))
+            if dist < dist_edge:
+                edge_info = edge
+                lane_info = edge.getLane(index)
+                dist_edge = dist
+                location = pos
 
         if dist_edge > 50.0:
             logging.info("Alert: parking lots %s is %d meters from edge %s.",
@@ -212,29 +193,12 @@ class ParkingAreasFromOSMGenerator(object):
             new_pl = {
                 'id': plid,
                 'lane': lane.getID(),
-                'start': - self._options.parking_len/2,
-                'end': self._options.parking_len/2,
+                'start': location - self._options.parking_len/2,
+                'end': location + self._options.parking_len/2,
                 'capacity': self._get_capacity(plid),
                 'coords': (float(self._osm_parkings[plid]['x']),
                            float(self._osm_parkings[plid]['y'])),
             }
-
-            _prec = None
-            _counter = 0
-
-            for point in lane.getShape():
-                if _prec is None:
-                    _prec = point
-                    _counter += 1
-                    continue
-                if _counter <= location:
-                    dist = euclidean(_prec, point)
-                    new_pl['start'] += dist
-                    new_pl['end'] += dist
-                    _prec = point
-                    _counter += 1
-                else:
-                    break
 
             if new_pl['start'] < self._options.intersection_buffer:
                 new_pl['start'] = self._options.intersection_buffer
