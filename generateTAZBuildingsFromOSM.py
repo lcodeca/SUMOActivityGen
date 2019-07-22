@@ -345,7 +345,7 @@ class GenerateTAZandWeightsFromOSM(object):
     def _building_to_edge(self, coords, id_taz):
         """ Given the coords of a building, return te closest edge """
 
-        centroid = coords = (float(coords[0]), float(coords[1]))
+        centroid = (float(coords[0]), float(coords[1]))
 
         pedestrian_edge_info = None
         pedestrian_dist_edge = sys.float_info.max
@@ -353,8 +353,11 @@ class GenerateTAZandWeightsFromOSM(object):
         generic_edge_info = None
         generic_dist_edge = sys.float_info.max
 
-        for id_edge in self._taz[id_taz]['edges']:
-            edge = self._net.getEdge(id_edge)
+        nearest_edges = self._net.getNeighboringEdges(float(coords[0]), float(coords[1]), r=1000.0)
+
+        for edge in nearest_edges:
+            if edge.getID() not in self._taz[id_taz]['edges']:
+                continue
             if edge.allows('rail'):
                 continue
             _, _, dist = edge.getClosestLanePosDist(centroid)
