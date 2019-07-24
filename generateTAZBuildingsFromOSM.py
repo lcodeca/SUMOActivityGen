@@ -355,7 +355,7 @@ class GenerateTAZandWeightsFromOSM(object):
 
         nearest_edges = self._net.getNeighboringEdges(float(coords[0]), float(coords[1]), r=1000.0)
 
-        for edge in nearest_edges:
+        for edge, _ in nearest_edges:
             if edge.getID() not in self._taz[id_taz]['edges']:
                 continue
             if edge.allows('rail'):
