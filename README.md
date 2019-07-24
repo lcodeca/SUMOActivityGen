@@ -1,4 +1,5 @@
 # SUMOActivityGen
+
 Activity-based Mobility Generation for SUMO Simulator
 
 Contacts: Lara CODECA [lara.codeca@gmail.com], Jerome HAERRI [haerri@eurecom.fr]
@@ -6,8 +7,10 @@ Contacts: Lara CODECA [lara.codeca@gmail.com], Jerome HAERRI [haerri@eurecom.fr]
 This program and the accompanying materials are made available under the
 terms of the Eclipse Public License 2.0 which is available at http://www.eclipse.org/legal/epl-2.0.
 
-### Overview
+## Overview
+
 This project is in its early stages, and it is still under development.
+
 * It can be tested and explored using the configuration files provided by [MoSTScenario](https://github.com/lcodeca/MoSTScenario) and `bash most.generator.sh`
 * The complete generation of a scenario from OSM can be done using `python3 scenarioFromOSM.py --osm {osm file} --out {putput directory}`. All the generated files are going to be in the output directory.
 
@@ -16,20 +19,26 @@ This project is in its early stages, and it is still under development.
 ![Scenario Generation Overview](https://github.com/lcodeca/SUMOActivityGen/blob/master/ScenarioGenerator.png)
 
 ### Due to some changes in the SUMO development version of the TraCI APIs, the master branch is not compatible with SUMO 1.2.0
+
 * _Release v0.1 is compatible with SUMO 1.2.0_
 
 ## HOW TO
 
 ### Required libraries
-`pip3 install tqdm pyproj numpy shapely matplotlib`
 
-### SUMOActivityGen
+`pip3 install tqdm pyproj numpy shapely matplotlib rtree`
+To use 'rtree', 'libspatialindex-dev' is requiresd to be installed.
+
+### The SUMOActivityGen mobility generator
+
 `python3 activitygen.py -c configuration.json`
 
-### Scenario Generation from OSM
+### The Scenario Generation from OSM
+
 `python3 scenarioFromOSM.py --osm file.osm --out target_directory`
 
 Optional parameters:
+
 ```
   --lefthand                Generate a left-hand traffic scenario.
   --population POPULATION   Number of people plans to generate.
