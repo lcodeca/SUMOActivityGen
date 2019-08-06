@@ -178,7 +178,7 @@ def _call_generate_parking_area_rerouters():
                          '--max-distance-alternatives', '1000.0',
                          '--min-capacity-visibility-true', '50',
                          '--max-distance-visibility-true', '1000.0',
-                         '-o', DEFAULT_PARKING_REROUTERS_XML]
+                         '-o', DEFAULT_PARKING_REROUTERS_XML, '--tqdm']
     generateParkingAreaRerouters.main(rerouters_options)
 
 def _call_polyconvert(filename):
