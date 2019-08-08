@@ -67,6 +67,9 @@ def get_options(cmd_args=None):
         help='Ignore administrative boundaries and generate only one TAZ.')
     parser.set_defaults(single_taz=False)
     parser.add_argument(
+        '--processes', type=int, dest='processes', default=1,
+        help='Number of processes spawned (when suported) to generate the scenario.')
+    parser.add_argument(
         '--from-step', type=int, dest='from_step', default=0,
         help='For successive iteration of the script, it defines from which step it should start: '
              '[0 - Copy default files.] '
@@ -170,7 +173,7 @@ def _merge_parking_files(side_parking, parking_areas, complete_parking):
     merged_parking = ElementTree.ElementTree(side_parking_struct)
     merged_parking.write(open(complete_parking, 'wb'))
 
-def _call_generate_parking_area_rerouters():
+def _call_generate_parking_area_rerouters(processes):
     """ Call directly generateParkingAreaRerouters from sumo/tools. """
     rerouters_options = ['-a', DEFAULT_COMPLETE_PARKING_XML,
                          '-n', DEFAULT_NET_XML,
@@ -178,6 +181,7 @@ def _call_generate_parking_area_rerouters():
                          '--max-distance-alternatives', '1000.0',
                          '--min-capacity-visibility-true', '50',
                          '--max-distance-visibility-true', '1000.0',
+                         '--processes', str(processes),
                          '-o', DEFAULT_PARKING_REROUTERS_XML, '--tqdm']
     generateParkingAreaRerouters.main(rerouters_options)
 
@@ -189,12 +193,13 @@ def _call_polyconvert(filename):
                            '-o', DEFAULT_POLY_XML]
     subprocess.call(polyconvert_options)
 
-def _call_generate_taz_buildings_from_osm(filename, single_taz):
+def _call_generate_taz_buildings_from_osm(filename, single_taz, processes):
     """ Call directly generateTAZBuildingsFromOSM from SUMOActivityGen. """
     taz_buildings_options = ['--osm', filename,
                              '--net', DEFAULT_NET_XML,
                              '--taz-output', DEFAULT_TAZ_OUTPUT_XML,
                              '--od-output', DEFAULT_OD_OUTPUT_CSV,
+                             '--processes', str(processes),                             
                              '--poly-output', DEFAULT_BUILDINGS_PREFIX]
     if single_taz:
         taz_buildings_options.append('--single-taz')
@@ -243,6 +248,7 @@ def main(cmd_args):
     """ Complete Scenario Generator. """
 
     args = get_options(cmd_args)
+    logging.info('%s', args)
 
     ## ========================              PROFILER              ======================== ##
     if args.profiling:
@@ -284,13 +290,13 @@ def main(cmd_args):
 
     if args.from_step <= 4:
         logging.info('Generate parking area rerouters using tools/generateParkingAreaRerouters.py')
-        _call_generate_parking_area_rerouters()
+        _call_generate_parking_area_rerouters(args.processes)
 
     if args.from_step <= 5:
         logging.info('Generate TAZ from administrative boundaries, TAZ weights using buildings and '
                      'PoIs and the buildings infrastructure.')
         os.makedirs('buildings', exist_ok=True)
-        _call_generate_taz_buildings_from_osm(args.osm_file, args.single_taz)
+        _call_generate_taz_buildings_from_osm(args.osm_file, args.single_taz, args.processes)
 
     if args.from_step <= 6:
         logging.info('Generate the default OD-Matrix in Amitran format. ')
