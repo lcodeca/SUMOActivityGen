@@ -10,6 +10,7 @@
 """
 
 import argparse
+import collections
 import csv
 import logging
 import multiprocessing
@@ -25,6 +26,8 @@ import shapely.geometry as geometry
 from shapely.ops import transform
 
 from tqdm import tqdm
+
+from pprint import pprint
 
 if 'SUMO_HOME' in os.environ:
     sys.path.append(os.path.join(os.environ['SUMO_HOME'], 'tools'))
@@ -56,11 +59,15 @@ def get_options(cmd_args=None):
                         help='Prefix for the POLY output files (CSV).')
     parser.add_argument('--single-taz', dest='single_taz', action='store_true',
                         help='Ignore administrative boundaries and generate only one TAZ.')
+    parser.add_argument('--processes', type=int, dest='processes', default=1,
+                        help='Number of processes spawned to associate buildings and edges.')
     parser.set_defaults(single_taz=False)
     return parser.parse_args(cmd_args)
 
 class GenerateTAZandWeightsFromOSM(object):
     """ Generate TAZ and Buildings weight from OSM."""
+
+    _param = None 
 
     _osm = None
     _net = None
@@ -70,48 +77,35 @@ class GenerateTAZandWeightsFromOSM(object):
         'way': {},
         'node': {},
     }
-
-    _osm_buildings = {
-        'relation': {},
-        'way': {},
-        'node': {},
-    }
-
+    _osm_buildings = dict()
     _taz = dict()
-    _all_in_one = False
 
-    def __init__(self, osm, net, single_taz):
-
-        self._osm = osm
-        self._net = net
-
-        self._all_in_one = single_taz
+    def __init__(self, parameters):
+        self._param = parameters
+        self._osm = _parse_xml_file(self._param.osm_file)
+        self._net = sumolib.net.readNet(self._param.net_file)
 
         logging.info('Filtering administrative boudaries from OSM..')
         self._filter_boundaries_from_osm()
-
         logging.info("Extracting TAZ from OSM boundaries.")
         self._build_taz_from_osm()
-
         logging.info("Computing TAZ areas...")
         self._taz_areas()
 
     def generate_taz(self):
         """ Generate TAZ by filtering edges,
             additionally computing TAZ weight through nodes and area. """
-
         logging.info("Filtering edges...")
         self._edges_filter()
-
         logging.info("Filtering nodes...")
         self._nodes_filter()
 
     def generate_buildings(self):
         """ Generate the buildings weight with edge and TAZ association."""
-
         logging.info("Filtering buildings...")
         self._filter_buildings_from_osm()
-
+        logging.info("Processing buildings...")
+        self._processing_buildings()
         logging.info("Sorting buildings in the TAZ...")
         self._sort_buildings()
 
@@ -140,30 +134,25 @@ class GenerateTAZandWeightsFromOSM(object):
 
     def _filter_boundaries_from_osm(self):
         """ Extract boundaries from OSM structure. """
-
         for relation in tqdm(self._osm['relation']):
             if 'tag' in relation and self._is_boundary(relation['tag']):
                 self._osm_boundaries['relation'][relation['id']] = relation
                 for member in relation['member']:
                     self._osm_boundaries[member['type']][member['ref']] = {}
-
         for way in tqdm(self._osm['way']):
             if way['id'] in self._osm_boundaries['way'].keys():
                 self._osm_boundaries['way'][way['id']] = way
                 for ndid in way['nd']:
                     self._osm_boundaries['node'][ndid['ref']] = {}
-
         for node in tqdm(self._osm['node']):
             if node['id'] in self._osm_boundaries['node'].keys():
                 self._osm_boundaries['node'][node['id']] = node
-
         logging.info('Found %d administrative boundaries.',
                      len(self._osm_boundaries['relation'].keys()))
 
     def _build_taz_from_osm(self):
         """ Extract TAZ from OSM boundaries. """
-
-        if not self._all_in_one:
+        if not self._param.single_taz:
             for id_boundary, boundary in tqdm(self._osm_boundaries['relation'].items()):
 
                 if not boundary:
@@ -224,7 +213,7 @@ class GenerateTAZandWeightsFromOSM(object):
                 'buildings_cumul_area': 0,
             }
             logging.info('Generated 1 TAZ containing everything.')
-            self._all_in_one = True
+            self._param.single_taz = True
 
     def _taz_areas(self):
         """ Compute the area in "shape" for each TAZ """
@@ -239,9 +228,8 @@ class GenerateTAZandWeightsFromOSM(object):
 
     def _edges_filter(self):
         """ Sort edges to the right TAZ """
-
         for edge in tqdm(self._net.getEdges()):
-            if self._all_in_one:
+            if self._param.single_taz:
                 self._taz['all']['edges'].add(edge.getID())
             else:
                 for coord in edge.getShape():
@@ -260,7 +248,7 @@ class GenerateTAZandWeightsFromOSM(object):
     def _nodes_filter(self):
         """ Sort nodes to the right TAZ """
         for node in tqdm(self._osm['node']):
-            if self._all_in_one:
+            if self._param.single_taz:
                 self._taz['all']['nodes'].add(node['id'])
             else:
                 for id_taz in list(self._taz.keys()):
@@ -280,151 +268,171 @@ class GenerateTAZandWeightsFromOSM(object):
 
     def _filter_buildings_from_osm(self):
         """ Extract buildings from OSM structure. """
+        nodes = dict()
+        for node in tqdm(self._osm['node']):
+            nodes[node['id']] = node
         for way in tqdm(self._osm['way']):
             if not self._is_building(way):
                 continue
-            self._osm_buildings['way'][way['id']] = way
+            self._osm_buildings[way['id']] = way
+            self._osm_buildings[way['id']]['nodes'] = list()
             for ndid in way['nd']:
-                self._osm_buildings['node'][ndid['ref']] = {}
+                self._osm_buildings[way['id']]['nodes'].append(nodes[ndid['ref']])
+        logging.info('Found %d buildings.', len(self._osm_buildings.keys()))
+    
+    def _processing_buildings(self):
+        """ Compute centroid and approximated area for each building (if necessary). """
+        with multiprocessing.Pool(processes=self._param.processes) as pool:
+            buildings = list(self._osm_buildings.values())
+            for res in tqdm(pool.imap_unordered(self._processing_buildings_parallel, buildings)):
+                self._osm_buildings[res['id']] = res
 
-        for node in tqdm(self._osm['node']):
-            if node['id'] in self._osm_buildings['node'].keys():
-                self._osm_buildings['node'][node['id']] = node
-
-        logging.info('Found %d buildings.',
-                     len(self._osm_buildings['way'].keys()))
-
-    def _get_centroid(self, way):
-        """ Return lat lon of the centroid. """
-        for tag in way['tag']:
-            if tag['k'] == 'centroid':
-                splitted = tag['v'].split(',')
-                return splitted[0], splitted[1]
-
-        ## the centroid has not yet been computed.
+    @staticmethod
+    def _processing_buildings_parallel(building):
+        """ Compute centroid and approximated area for each building (if necessary). """
+        # compute the centroid
         points = []
-        for node in way['nd']:
-            points.append([float(self._osm_buildings['node'][node['ref']]['lat']),
-                           float(self._osm_buildings['node'][node['ref']]['lon'])])
+        for node in building['nodes']:
+            points.append([float(node['lat']), float(node['lon'])])
         centroid = numpy.mean(numpy.array(points), axis=0)
-
-        self._osm_buildings['way'][way['id']]['tag'].append({
-            'k':  'centroid',
-            'v':  '{}, {}'.format(centroid[0], centroid[1])
+        building['tag'].append({
+                'k':  'centroid',
+                'v':  '{}, {}'.format(centroid[0], centroid[1])
             })
-        return centroid[0], centroid[1]
-
-    def _get_approx_area(self, way):
-        """ Return approximated area of the building. """
-        for tag in way['tag']:
-            if tag['k'] == 'approx_area':
-                return float(tag['v'])
-
-        ## the approx_area has not yet been computed.
-        points = []
-        for node in way['nd']:
-            points.append([float(self._osm_buildings['node'][node['ref']]['lat']),
-                           float(self._osm_buildings['node'][node['ref']]['lon'])])
-
+        # compute the approximated area
         approx = geometry.MultiPoint(points).convex_hull
         # http://openstreetmapdata.com/info/projections
         proj = partial(pyproj.transform, pyproj.Proj(init='epsg:4326'),
                        pyproj.Proj(init='epsg:3857'))
-
         converted_approximation = transform(proj, approx)
-
         area = 0.0
         if not numpy.isnan(converted_approximation.area):
             area = converted_approximation.area
-        self._osm_buildings['way'][way['id']]['tag'].append({
-            'k':  'approx_area',
-            'v':  area
+        building['tag'].append({
+                'k':  'approx_area',
+                'v':  area
             })
-        return area
-
-    def _building_to_edge(self, coords, id_taz):
-        """ Given the coords of a building, return te closest edge """
-
-        centroid = (float(coords[0]), float(coords[1]))
-
-        pedestrian_edge_info = None
-        pedestrian_dist_edge = sys.float_info.max
-
-        generic_edge_info = None
-        generic_dist_edge = sys.float_info.max
-
-        nearest_edges = self._net.getNeighboringEdges(float(coords[0]), float(coords[1]), r=1000.0)
-
-        for edge, _ in nearest_edges:
-            if edge.getID() not in self._taz[id_taz]['edges']:
-                continue
-            if edge.allows('rail'):
-                continue
-            _, _, dist = edge.getClosestLanePosDist(centroid)
-            if edge.allows('passenger') and dist < generic_dist_edge:
-                generic_edge_info = edge
-                generic_dist_edge = dist
-            if edge.allows('pedestrian') and dist < pedestrian_dist_edge:
-                pedestrian_edge_info = edge
-                pedestrian_dist_edge = dist
-
-        if generic_edge_info and generic_dist_edge > 500.0:
-            logging.info("A building entrance [passenger] is %d meters away.",
-                         generic_dist_edge)
-        if pedestrian_edge_info and pedestrian_dist_edge > 500.0:
-            logging.info("A building entrance [pedestrian] is %d meters away.",
-                         pedestrian_dist_edge)
-
-        return generic_edge_info, pedestrian_edge_info
-
-    def _sort_buildings_into_taz(self, buildings):
-        """ Sort buildings to the right TAZ based on centroid. """
-        for building in tqdm(buildings):
-            way = self._osm_buildings['way'][building]
-
-            ## compute the centroid
-            lat, lon = self._get_centroid(way)
-
-            ## compute the approximated area
-            area = int(self._get_approx_area(way))
-            if area == -1:
-                ## there have been problems with the building conversion
-                continue
-
-            if self._all_in_one:
-                self._add_building_to_taz('all', way['id'], area, lat, lon)
-            else:
-                for id_taz in list(self._taz.keys()):
-                    if self._taz[id_taz]['convex_hull'].contains(
-                            geometry.Point(float(lon), float(lat))):
-                        self._add_building_to_taz(id_taz, way['id'], area, lat, lon)
-
+        return building
+  
     def _sort_buildings(self):
         """ Multiprocess helper to sort buildings to the right TAZ based on centroid. """
-        splits = numpy.array_split(list(self._osm_buildings['way'].keys()),
-                                   multiprocessing.cpu_count())
-        processes = list()
-        for split in splits:
-            _sorting_process = multiprocessing.Process(target=self._sort_buildings_into_taz,
-                                                       args=(split,))
-            processes.append(_sorting_process)
-            _sorting_process.start()
-        for sorting_process in processes:
-            sorting_process.join()
+        with multiprocessing.Pool(processes=self._param.processes) as pool:
+            list_parameters = list()
+            slices = numpy.array_split(list(self._osm_buildings.values()), self._param.processes)
+            logging.info('Preprocessing for multiprocessing...')
+            for buildings in slices:
+                parameters = {
+                    'buildings': buildings,
+                    'all_in_one': self._param.single_taz, 
+                    'taz': self._taz, 
+                    'net_file': self._param.net_file,
+                }
+                list_parameters.append(parameters)
+            logging.info('Buildings to TAZ multiprocessing...')
+            for res in pool.imap_unordered(self._sort_buildings_into_taz, list_parameters):
+                for id_taz, assocs in res.items():
+                    self._taz[id_taz]['buildings'] |= assocs['buildings'] 
+                    self._taz[id_taz]['buildings_cumul_area'] += assocs['buildings_cumul_area'] 
+    
+    @staticmethod
+    def _sort_buildings_into_taz(parameters):
+        """ Sort buildings to the right TAZ based on centroid. """
+        ## global sumolib network
+        sumo_net = sumolib.net.readNet(parameters['net_file'])
+        
+        def _get_centroid(building):
+            """ Return the lat lon of the centroid. """
+            for tag in building['tag']:
+                if tag['k'] == 'centroid':
+                    splitted = tag['v'].split(',')
+                    return splitted[0], splitted[1]
+            return None
 
-    def _add_building_to_taz(self, id_taz, id_way, area, lat, lon):
-        """ Adds a building to the specific TAZ. """
-        generic_edge, pedestrian_edge = self._building_to_edge(
-            self._net.convertLonLat2XY(lon, lat), id_taz)
-        if generic_edge or pedestrian_edge:
-            gen_id = None
-            ped_id = None
-            if generic_edge:
-                gen_id = generic_edge.getID()
-            if pedestrian_edge:
-                ped_id = pedestrian_edge.getID()
-            self._taz[id_taz]['buildings'].add((id_way, area, gen_id, ped_id))
-            self._taz[id_taz]['buildings_cumul_area'] += area
+        def _get_approx_area(building):
+            """ Return approximated area of the building. """
+            for tag in building['tag']:
+                if tag['k'] == 'approx_area':
+                    return float(tag['v'])
+            return None     
+        
+        def _building_to_edge(id_taz, x_coord, y_coord):
+            """ Given the coords of a building, return te closest edge """
+            centroid = (x_coord, y_coord)
+
+            pedestrian_edge_info = None
+            pedestrian_dist_edge = sys.float_info.max
+
+            generic_edge_info = None
+            generic_dist_edge = sys.float_info.max            
+
+            neighbours = sumo_net.getNeighboringEdges(x_coord, y_coord, r=1000.0)
+
+            for edge, _ in neighbours:
+                if edge.getID() not in parameters['taz'][id_taz]['edges']:
+                    continue
+                if edge.allows('rail'):
+                    continue
+                _, _, dist = edge.getClosestLanePosDist(centroid)
+                if edge.allows('passenger') and dist < generic_dist_edge:
+                    generic_edge_info = edge
+                    generic_dist_edge = dist
+                if edge.allows('pedestrian') and dist < pedestrian_dist_edge:
+                    pedestrian_edge_info = edge
+                    pedestrian_dist_edge = dist
+
+            if generic_edge_info and generic_dist_edge > 500.0:
+                logging.info("A building entrance [passenger] is %d meters away.",
+                            generic_dist_edge)
+            if pedestrian_edge_info and pedestrian_dist_edge > 500.0:
+                logging.info("A building entrance [pedestrian] is %d meters away.",
+                            pedestrian_dist_edge)
+
+            return generic_edge_info, pedestrian_edge_info
+
+        def _associate_building_to_edges(id_taz, lat, lon):
+            """ Adds a building to the specific TAZ. """
+            x_coord, y_coord = sumo_net.convertLonLat2XY(lon, lat)
+            generic_edge, pedestrian_edge = _building_to_edge(id_taz, x_coord, y_coord)
+            if generic_edge or pedestrian_edge:
+                gen_id = None
+                ped_id = None
+                if generic_edge:
+                    gen_id = generic_edge.getID()
+                if pedestrian_edge:
+                    ped_id = pedestrian_edge.getID()
+                return gen_id, ped_id
+            return None
+
+        associations = dict()
+        for id_taz in list(parameters['taz'].keys()):
+            associations[id_taz] = {
+                'buildings': set(),
+                'buildings_cumul_area': 0
+            }
+        for building in tqdm(parameters['buildings']):
+            area = int(_get_approx_area(building))
+            if area <= 0:
+                ## there have been problems with the building conversion
+                    continue
+            lat, lon = _get_centroid(building)
+
+            if parameters['all_in_one']:
+                ret = _associate_building_to_edges('all', lat, lon)
+                if ret:
+                    gen_id, ped_id = ret
+                    associations['all']['buildings'].add((building['id'], area, gen_id, ped_id))
+                    associations['all']['buildings_cumul_area'] += area
+            else:
+                for id_taz in list(parameters['taz'].keys()):
+                    if parameters['taz'][id_taz]['convex_hull'].contains(
+                            geometry.Point(float(lon), float(lat))):
+                        ret = _associate_building_to_edges(id_taz, lat, lon)
+                        if ret:
+                            gen_id, ped_id = ret
+                            associations[id_taz]['buildings'].add(
+                                (building['id'], area, gen_id, ped_id))
+                            associations[id_taz]['buildings_cumul_area'] += area
+        return associations   
 
     _TAZS = """
 <tazs> {list_of_tazs}
@@ -496,11 +504,7 @@ def main(cmd_args):
     """ Generate TAZ and Buildings weight from OSM. """
 
     args = get_options(cmd_args)
-
-    osm = _parse_xml_file(args.osm_file)
-    net = sumolib.net.readNet(args.net_file)
-
-    taz_generator = GenerateTAZandWeightsFromOSM(osm, net, args.single_taz)
+    taz_generator = GenerateTAZandWeightsFromOSM(args)
     taz_generator.generate_taz()
     taz_generator.save_sumo_taz(args.taz_output)
     taz_generator.save_taz_weigth(args.od_output)
