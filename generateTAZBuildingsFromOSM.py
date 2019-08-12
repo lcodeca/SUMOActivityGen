@@ -199,7 +199,7 @@ class GenerateTAZandWeightsFromOSM(object):
         if not self._taz:
             ## Generate only one taz with everything in it.
             list_of_nodes = []
-            for node in self._osm_boundaries['node'].values():
+            for node in self._osm['node']:
                 if node:
                     list_of_nodes.append((float(node['lon']), float(node['lat'])))
             self._taz['all'] = {
