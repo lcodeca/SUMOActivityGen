@@ -355,7 +355,7 @@ class GenerateTAZandWeightsFromOSM(object):
                     return float(tag['v'])
             return None     
         
-        def _building_to_edge(id_taz, x_coord, y_coord):
+        def _building_to_edge(id_taz, x_coord, y_coord, neighbours):
             """ Given the coords of a building, return te closest edge """
             centroid = (x_coord, y_coord)
 
@@ -364,9 +364,7 @@ class GenerateTAZandWeightsFromOSM(object):
 
             generic_edge_info = None
             generic_dist_edge = sys.float_info.max            
-
-            neighbours = sumo_net.getNeighboringEdges(x_coord, y_coord, r=1000.0)
-
+            
             for edge, _ in neighbours:
                 if edge.getID() not in parameters['taz'][id_taz]['edges']:
                     continue
@@ -389,10 +387,9 @@ class GenerateTAZandWeightsFromOSM(object):
 
             return generic_edge_info, pedestrian_edge_info
 
-        def _associate_building_to_edges(id_taz, lat, lon):
+        def _associate_building_to_edges(id_taz, x_coord, y_coord, neighbours):
             """ Adds a building to the specific TAZ. """
-            x_coord, y_coord = sumo_net.convertLonLat2XY(lon, lat)
-            generic_edge, pedestrian_edge = _building_to_edge(id_taz, x_coord, y_coord)
+            generic_edge, pedestrian_edge = _building_to_edge(id_taz, x_coord, y_coord, neighbours)
             if generic_edge or pedestrian_edge:
                 gen_id = None
                 ped_id = None
@@ -415,9 +412,11 @@ class GenerateTAZandWeightsFromOSM(object):
                 ## there have been problems with the building conversion
                     continue
             lat, lon = _get_centroid(building)
+            x_coord, y_coord = sumo_net.convertLonLat2XY(lon, lat)
+            neighbours = sumo_net.getNeighboringEdges(x_coord, y_coord, r=1000.0)
 
             if parameters['all_in_one']:
-                ret = _associate_building_to_edges('all', lat, lon)
+                ret = _associate_building_to_edges('all', x_coord, y_coord, neighbours)
                 if ret:
                     gen_id, ped_id = ret
                     associations['all']['buildings'].add((building['id'], area, gen_id, ped_id))
@@ -426,7 +425,7 @@ class GenerateTAZandWeightsFromOSM(object):
                 for id_taz in list(parameters['taz'].keys()):
                     if parameters['taz'][id_taz]['convex_hull'].contains(
                             geometry.Point(float(lon), float(lat))):
-                        ret = _associate_building_to_edges(id_taz, lat, lon)
+                        ret = _associate_building_to_edges(id_taz, x_coord, y_coord, neighbours)
                         if ret:
                             gen_id, ped_id = ret
                             associations[id_taz]['buildings'].add(
