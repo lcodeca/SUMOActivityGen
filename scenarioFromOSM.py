@@ -97,6 +97,10 @@ DEFAULT_NET_XML = 'osm.net.xml'
 DEFAULT_PT_STOPS_XML = 'osm_stops.add.xml'
 DEFAULT_PT_LINES = 'osm_ptlines.xml'
 DEFAULT_SIDE_PARKING_XML = 'osm_parking.xml'
+DEFAULT_TYPE_FILES = ('{}/data/typemap/osmNetconvert.typ.xml,'
+                      '{}/data/typemap/osmNetconvertBicycle.typ.xml,'
+                      '{}/data/typemap/osmNetconvertPedestrians.typ.xml'.format(
+                          os.environ['SUMO_HOME'],os.environ['SUMO_HOME'],os.environ['SUMO_HOME']))
 
 ## ptlines2flows
 DEFAULT_PT_FLOWS = 'osm_pt.rou.xml'
@@ -136,7 +140,8 @@ def _call_netconvert(filename, lefthand):
                           '-o', DEFAULT_NET_XML,
                           '--ptstop-output', DEFAULT_PT_STOPS_XML,
                           '--ptline-output', DEFAULT_PT_LINES,
-                          '--parking-output', DEFAULT_SIDE_PARKING_XML]
+                          '--parking-output', DEFAULT_SIDE_PARKING_XML,
+                          '--type-files', DEFAULT_TYPE_FILES]
     if lefthand:
         netconvert_options.append('--lefthand')
     subprocess.call(netconvert_options)

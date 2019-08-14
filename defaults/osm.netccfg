@@ -30,6 +30,7 @@
     <junctions>
         <junctions.join value="true"/>
         <junctions.corner-detail value="5"/>
+        <no-turnarounds.except-deadend value="true"/>
     </junctions>
 
     <pedestrian>
