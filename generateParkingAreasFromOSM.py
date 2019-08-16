@@ -41,13 +41,14 @@ def get_options(cmd_args=None):
     parser.add_argument('--out', type=str, dest='output', required=True,
                         help='SUMO parking areas file.')
     parser.add_argument('--default-capacity', type=int, dest='default_capacity', default=100,
-                        help='Default parking areas capacity id the OSM tag is missing.')
+                        help='Default parking areas capacity if the OSM tag is missing.')
     parser.add_argument('--parking-len', type=float, dest='parking_len', default=10.0,
                         help='Parking areas length.')
     parser.add_argument('--parking-angle', type=float, dest='parking_angle', default=45.0,
                         help='Parking areas angle.')
     parser.add_argument('--distance-from-intersection', type=float, dest='intersection_buffer',
-                        default=10.0, help='Parking areas angle.')
+                        default=10.0, help='Buffer area used to avoid having the parking entrance '
+                        'too close to an intersection.')
     return parser.parse_args(cmd_args)
 
 class ParkingAreasFromOSMGenerator(object):

@@ -52,9 +52,9 @@ def get_options(cmd_args=None):
     parser.add_argument('--net', type=str, dest='net_file', required=True,
                         help='SUMO network xml file.')
     parser.add_argument('--taz-output', type=str, dest='taz_output', required=True,
-                        help='Prefix for the TAZ output file (XML).')
-    parser.add_argument('--od-output', type=str, dest='od_output', required=True,
-                        help='Prefix for the OD output file (CSV).')
+                        help='TAZ output file (XML).')
+    parser.add_argument('--weight-output', type=str, dest='od_output', required=True,
+                        help='TAZ weight output file (CSV).')
     parser.add_argument('--poly-output', type=str, dest='poly_output', required=True,
                         help='Prefix for the POLY output files (CSV).')
     parser.add_argument('--single-taz', dest='single_taz', action='store_true',

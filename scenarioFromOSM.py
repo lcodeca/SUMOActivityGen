@@ -119,7 +119,7 @@ DEFAULT_POLY_XML = 'osm_polygons.add.xml'
 
 ## generateTAZBuildingsFromOSM
 DEFAULT_TAZ_OUTPUT_XML = 'osm_taz.xml'
-DEFAULT_OD_OUTPUT_CSV = 'osm_taz_weight.csv'
+DEFAULT_WEIGHT_OUTPUT_CSV = 'osm_taz_weight.csv'
 DEFAULT_BUILDINGS_PREFIX = 'buildings/osm_buildings'
 
 ## generateAmitranFromTAZWeights
@@ -203,7 +203,7 @@ def _call_generate_taz_buildings_from_osm(filename, single_taz, processes):
     taz_buildings_options = ['--osm', filename,
                              '--net', DEFAULT_NET_XML,
                              '--taz-output', DEFAULT_TAZ_OUTPUT_XML,
-                             '--od-output', DEFAULT_OD_OUTPUT_CSV,
+                             '--weight-output', DEFAULT_WEIGHT_OUTPUT_CSV,
                              '--processes', str(processes),                             
                              '--poly-output', DEFAULT_BUILDINGS_PREFIX]
     if single_taz:
@@ -212,7 +212,7 @@ def _call_generate_taz_buildings_from_osm(filename, single_taz, processes):
 
 def _call_generate_amitran_from_taz_weights(density):
     """ Call directly generateAmitranFromTAZWeights from SUMOActivityGen. """
-    odmatrix_options = ['--taz-weights', DEFAULT_OD_OUTPUT_CSV,
+    odmatrix_options = ['--taz-weights', DEFAULT_WEIGHT_OUTPUT_CSV,
                         '--out', DEFAULT_ODMATRIX_AMITRAN_XML,
                         '--density', str(density)]
     generateAmitranFromTAZWeights.main(odmatrix_options)
