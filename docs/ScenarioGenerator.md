@@ -7,8 +7,8 @@ The main program, `python3 scenarioFromOSM.py --osm file.osm --out target_direct
 Depending on the OSM file and the requirements, additional parameters can be used:
 
 * `--lefthand` is used to generate a left-hand traffic scenario.
-* `--population` is used to change the number of people plans to generate. The default is 1000.
-* `--density` is used to define the average population density in square kilometers to be used in the origin-destination matrix.
+* `--population` is used to change the number of people plans to generate. The default is 1000. This parameter tunes `generateDefaultsActivityGen.py`.
+* `--density` is used to define the average population density in square kilometers to be used in the origin-destination matrix. The default is 3000. This paprameter tunes `generateAmitranFromTAZWeights.py`.
 * `--single-taz` is used to ignore the administrative boundaries and generate only one TAZ.
 * `--from-step` is used for successive iteration of the program after a manual change of the files. The number defines from which step the generation should be recomputed:
   * 0 - Copy default files.
