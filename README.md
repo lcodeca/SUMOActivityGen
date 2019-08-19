@@ -13,8 +13,8 @@ This Source Code may also be made available under the following Secondary Licens
 
 This project is in its early stages, and it is still under active development.
 
-* The complete generation of a scenario from OSM can be done using `python3 scenarioFromOSM.py --osm {osm file} --out {putput directory}`. All the generated files are going to be in the output directory.
-* Alternatively, it can be tested and explored using the configuration files provided by [MoSTScenario](https://github.com/lcodeca/MoSTScenario) and `bash most.generator.sh`
+* The complete generation of a scenario from OSM can be done using `python3 scenarioFromOSM.py --osm {osm file} --out {output directory}`. All the generated files are going to be in the output directory.
+* Alternatively, it can be tested and explored using the configuration files provided by [MoSTScenario](https://github.com/lcodeca/MoSTScenario) and in the `example` directory, starting from `bash most.generator.sh`.
 
 The documentation is availalbe in the `docs` folder.
 

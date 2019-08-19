@@ -2,9 +2,7 @@
 misc
 
 # Testing
-MoSTScenario
-rou/most.test.rou.xml
-sim
+example/*
 Test_*
 
 #Other
