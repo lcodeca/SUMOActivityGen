@@ -67,6 +67,13 @@ def get_options(cmd_args=None):
         help='Ignore administrative boundaries and generate only one TAZ.')
     parser.set_defaults(single_taz=False)
     parser.add_argument(
+        '--admin-level', type=int, dest='admin_level', default=None,
+        help='Select only the administrative boundaries with the given level and generate'
+        ' the associated TAZs.')
+    parser.add_argument(
+        '--taz-plot', type=str, dest='html_filename', default='',
+        help='Plots the TAZs to an HTML file as OSM overlay. (Requires folium)')
+    parser.add_argument(
         '--processes', type=int, dest='processes', default=1,
         help='Number of processes spawned (when suported) to generate the scenario.')
     parser.add_argument(
@@ -198,7 +205,7 @@ def _call_polyconvert(filename):
                            '-o', DEFAULT_POLY_XML]
     subprocess.call(polyconvert_options)
 
-def _call_generate_taz_buildings_from_osm(filename, single_taz, processes):
+def _call_generate_taz_buildings_from_osm(filename, single_taz, processes, admin_level, plot):
     """ Call directly generateTAZBuildingsFromOSM from SUMOActivityGen. """
     taz_buildings_options = ['--osm', filename,
                              '--net', DEFAULT_NET_XML,
@@ -208,6 +215,12 @@ def _call_generate_taz_buildings_from_osm(filename, single_taz, processes):
                              '--poly-output', DEFAULT_BUILDINGS_PREFIX]
     if single_taz:
         taz_buildings_options.append('--single-taz')
+    if admin_level:
+        taz_buildings_options.append('--admin-level')
+        taz_buildings_options.append(str(admin_level))
+    if plot:
+        taz_buildings_options.append('--taz-plot')
+        taz_buildings_options.append(plot)
     generateTAZBuildingsFromOSM.main(taz_buildings_options)
 
 def _call_generate_amitran_from_taz_weights(density):
@@ -301,7 +314,8 @@ def main(cmd_args):
         logging.info('Generate TAZ from administrative boundaries, TAZ weights using buildings and '
                      'PoIs and the buildings infrastructure.')
         os.makedirs('buildings', exist_ok=True)
-        _call_generate_taz_buildings_from_osm(args.osm_file, args.single_taz, args.processes)
+        _call_generate_taz_buildings_from_osm(args.osm_file, args.single_taz, args.processes,
+                                              args.admin_level, args.html_filename)
 
     if args.from_step <= 6:
         logging.info('Generate the default OD-Matrix in Amitran format. ')

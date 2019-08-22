@@ -59,6 +59,11 @@ def get_options(cmd_args=None):
                         help='Prefix for the POLY output files (CSV).')
     parser.add_argument('--single-taz', dest='single_taz', action='store_true',
                         help='Ignore administrative boundaries and generate only one TAZ.')
+    parser.add_argument('--admin-level', type=int, dest='admin_level', default=None,
+                        help='Select only the administrative boundaries with the given level '
+                        'and generate the associated TAZs.')
+    parser.add_argument('--taz-plot', type=str, dest='html_filename', default='',
+                        help='Plots the TAZs to an HTML file as OSM overlay. (Requires folium)')
     parser.add_argument('--processes', type=int, dest='processes', default=1,
                         help='Number of processes spawned to associate buildings and edges.')
     parser.set_defaults(single_taz=False)
@@ -79,6 +84,11 @@ class GenerateTAZandWeightsFromOSM(object):
     }
     _osm_buildings = dict()
     _taz = dict()
+
+    _center = {
+        'lat': 0.0,
+        'lon': 0.0,
+    }
 
     def __init__(self, parameters):
         self._param = parameters
@@ -124,6 +134,21 @@ class GenerateTAZandWeightsFromOSM(object):
         logging.info("Creation of %s", filename)
         self._write_poly_files(filename)
 
+    def save_taz_to_osm(self, filename):
+        """ Plot the boundaries using folium to html file."""
+        import folium
+        from random import choice
+        logging.info("Plotting TAZ to OpenStreetMap in file %s.", filename)
+        colors = ['#0000FF', '#0040FF', '#0080FF', '#00FFB0', '#00E000', '#80FF00',
+                  '#FFFF00', '#FFC000', '#FF0000']
+        osm_map = folium.Map(location=[self._center['lat'], self._center['lon']])
+        for _, value in self._taz.items():
+            lons, lats = value['convex_hull'].exterior.xy
+            points = list(zip(lats, lons))
+            folium.PolyLine(points, tooltip=value['name'],
+                            color=choice(colors), opacity=0.95).add_to(osm_map)
+        osm_map.save(filename)
+
     @staticmethod
     def _is_boundary(tags):
         """ Check tags to find {'k': 'boundary', 'v': 'administrative'} """
@@ -132,10 +157,24 @@ class GenerateTAZandWeightsFromOSM(object):
                 return True
         return False
 
+    @staticmethod
+    def _is_admin_level(tags, level):
+        """ Check tags to find {'k': 'admin_level', 'v': '*'} and 
+            returns True iff the value has the given level. 
+        """
+        for tag in tags:
+            if tag['k'] == 'admin_level' and tag['v'] == str(level):
+                return True
+        return False
+
     def _filter_boundaries_from_osm(self):
         """ Extract boundaries from OSM structure. """
         for relation in tqdm(self._osm['relation']):
             if 'tag' in relation and self._is_boundary(relation['tag']):
+                if self._param.admin_level:
+                    if not self._is_admin_level(relation['tag'], self._param.admin_level):
+                        ## it's a boundary but from the wrong admin_level
+                        continue
                 self._osm_boundaries['relation'][relation['id']] = relation
                 for member in relation['member']:
                     self._osm_boundaries[member['type']][member['ref']] = {}
@@ -247,7 +286,9 @@ class GenerateTAZandWeightsFromOSM(object):
 
     def _nodes_filter(self):
         """ Sort nodes to the right TAZ """
+        points = []
         for node in tqdm(self._osm['node']):
+            points.append([float(node['lat']), float(node['lon'])])
             if self._param.single_taz:
                 self._taz['all']['nodes'].add(node['id'])
             else:
@@ -255,6 +296,9 @@ class GenerateTAZandWeightsFromOSM(object):
                     if self._taz[id_taz]['convex_hull'].contains(
                             geometry.Point(float(node['lon']), float(node['lat']))):
                         self._taz[id_taz]['nodes'].add(node['id'])
+        lat, lon = numpy.mean(numpy.array(points), axis=0)
+        self._center['lat'] = lat
+        self._center['lon'] = lon
 
     @staticmethod
     def _is_building(way):
@@ -509,6 +553,8 @@ def main(cmd_args):
     taz_generator.save_taz_weigth(args.od_output)
     taz_generator.generate_buildings()
     taz_generator.save_buildings_weigth(args.poly_output)
+    if args.html_filename:
+        taz_generator.save_taz_to_osm(args.html_filename)
 
     logging.info("Done.")
 

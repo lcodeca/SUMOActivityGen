@@ -1,12 +1,18 @@
 # HOW TO
 
-## Required libraries
+## Requirements
+
+### Libraries
 
 To use this software the following Python 3 libraries are required:
 
-* `pip3 install tqdm pyproj numpy shapely matplotlib rtree`
+* `pip3 install tqdm pyproj numpy shapely matplotlib rtree folium`
 
 To use `rtree`, `libspatialindex-dev` is required to be installed.
+
+### Eclipse SUMO
+
+This software requires [Eclipse SUMO v1.3](https://github.com/eclipse/sumo/releases/tag/v1_3_0)
 
 ## The Scenario Generation from OSM
 
@@ -21,6 +27,8 @@ Optional parameters:
   --population POPULATION   Number of people plans to generate.
   --density DENSITY         Average population density in square kilometers.
   --single-taz              Ignore administrative boundaries and generate only one TAZ.
+  --admin-level             Select only the administrative boundaries with the given level and generate the associated TAZs.
+  --taz-plot                Plots the TAZs to an HTML file as OSM overlay. (Requires folium)
   --from-step FROM_STEP     For successive iteration of the script,
                             it defines from which step it should start:
                             [0 - Copy default files.]

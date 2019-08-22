@@ -9,7 +9,9 @@ Depending on the OSM file and the requirements, additional parameters can be use
 * `--lefthand` is used to generate a left-hand traffic scenario.
 * `--population` is used to change the number of people plans to generate. The default is 1000. This parameter tunes `generateDefaultsActivityGen.py`.
 * `--density` is used to define the average population density in square kilometers to be used in the origin-destination matrix. The default is 3000. This paprameter tunes `generateAmitranFromTAZWeights.py`.
-* `--single-taz` is used to ignore the administrative boundaries and generate only one TAZ.
+* `--single-taz` is used to ignore the administrative boundaries and generate only one TAZ. This paprameter tunes `generateTAZBuildingsFromOSM.py`.
+* `--admin-level` is used to filter the administrative boundaries using the `admin_level` values in OSM. This paprameter tunes `generateTAZBuildingsFromOSM.py`.
+* `--taz-plot` is used to plot the generated TAZs as an OSM overlay in a HTML file. It requires the folium library. This paprameter tunes `generateTAZBuildingsFromOSM.py`.
 * `--from-step` is used for successive iteration of the program after a manual change of the files. The number defines from which step the generation should be recomputed:
   * 0 - Copy default files.
   * 1 - Run netconvert & polyconvert.
@@ -58,6 +60,8 @@ It can be used as stand-alone program with the following parametrization:
 * `--weight-output` is the TAZ's weight output file (CSV).
 * `--poly-output` is the prefix for the builgings output files (CSV).
 * `--single-taz` is used to ignore administrative boundaries and generate only one TAZ.
+* `--admin-level` is used to filter the administrative boundaries using the `admin_level` values in OSM.
+* `--taz-plot` is used to plot the generated TAZs as an OSM overlay in a HTML file. It requires the folium library.
 * `--processes` is the number of processes spawned to associate buildings and edges.
 
 ## Origin-Destination matrix: generateAmitranFromTAZWeights.py
