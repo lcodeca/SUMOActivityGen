@@ -130,7 +130,7 @@ class ModeShare(Enum):
     PROBABILITY = 1
     WEIGHT = 2
 
-class MobilityGenerator(object):
+class MobilityGenerator():
     """ Generates intermodal mobility for SUMO starting from a synthetic population. """
 
     _conf = None
@@ -164,7 +164,7 @@ class MobilityGenerator(object):
 
         if not conf['intermodalOptions']['modeSelection']:
             raise Exception('The parameter "modeSelection" in "intermodalOptions" must be defined.')
-        elif conf['intermodalOptions']['modeSelection'] == 'PROBABILITY':
+        if conf['intermodalOptions']['modeSelection'] == 'PROBABILITY':
             self._mode_interpr = ModeShare.PROBABILITY
         elif conf['intermodalOptions']['modeSelection'] == 'WEIGHT':
             self._mode_interpr = ModeShare.WEIGHT
@@ -699,7 +699,8 @@ class MobilityGenerator(object):
                 person_stages[pos] = stage._replace(toEdge=destination)
         return person_stages
 
-    def _stages_compute_start_time(self, person_stages):
+    @staticmethod
+    def _stages_compute_start_time(person_stages):
         """ Compute the real starting time for the activity chain. """
         # Find the first 'start' defined.
         pos = 1
@@ -889,7 +890,7 @@ class MobilityGenerator(object):
         while edges:
             edge = self._random_generator.choice(edges)
             edges.remove(edge)
-            if edge == focus1 or edge == focus2:
+            if edge in (focus1, focus2):
                 continue
             allowed = (
                 self._sumo_network.getEdge(edge).allows('pedestrian') and
@@ -1064,9 +1065,9 @@ class MobilityGenerator(object):
         """
         if mode == 'public':
             return 'public', '', ''
-        elif mode == 'bicycle':
+        if mode == 'bicycle':
             return 'bicycle', '', 'bicycle'
-        elif mode == 'walk':
+        if mode == 'walk':
             return '', 'pedestrian', ''
         return 'car', '', mode      # (but car is not always necessary, and it may
                                     #  creates unusable alternatives)
@@ -1085,7 +1086,7 @@ class MobilityGenerator(object):
             for stage in route:
                 if stage.line:
                     return True
-        elif _mode == 'car' or _mode == 'bicycle':
+        elif _mode in ('car', 'bicycle'):
             for stage in route:
                 if stage.type == tc.STAGE_DRIVING and len(stage.edges) >= 2:
                     return True
@@ -1250,9 +1251,8 @@ class MobilityGenerator(object):
                             if _triggered_route[-1] != stage.edges[0]:
                                 raise TripGenerationInconsistencyError(
                                     'Triggered vehicle has a broken route.')
-                            else:
-                                ## remove the duplicated edge
-                                _triggered_route.extend(stage.edges[1:])
+                            ## remove the duplicated edge
+                            _triggered_route.extend(stage.edges[1:])
                         else:
                             ## nothing to be "fixed"
                             _triggered_route.extend(stage.edges)

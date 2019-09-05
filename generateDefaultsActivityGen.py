@@ -37,7 +37,7 @@ def get_options(cmd_args=None):
                         help='Population: number of entities to generate.')
     return parser.parse_args(cmd_args)
 
-class ActivitygenDefaultGenerator(object):
+class ActivitygenDefaultGenerator():
     """ Generate the default values for SUMOActivityGen. """
 
     _options = None

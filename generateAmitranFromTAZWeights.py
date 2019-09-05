@@ -34,7 +34,7 @@ def get_options(cmd_args=None):
                         help='Average population density in square kilometers.')
     return parser.parse_args(cmd_args)
 
-class AmitranFromTAZWeightsGenerator(object):
+class AmitranFromTAZWeightsGenerator():
     """ Generate the default Amitran OD-matrix from TAZ weights. """
 
     _options = None

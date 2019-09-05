@@ -107,7 +107,8 @@ DEFAULT_SIDE_PARKING_XML = 'osm_parking.xml'
 DEFAULT_TYPE_FILES = ('{}/data/typemap/osmNetconvert.typ.xml,'
                       '{}/data/typemap/osmNetconvertBicycle.typ.xml,'
                       '{}/data/typemap/osmNetconvertPedestrians.typ.xml'.format(
-                          os.environ['SUMO_HOME'],os.environ['SUMO_HOME'],os.environ['SUMO_HOME']))
+                          os.environ['SUMO_HOME'], os.environ['SUMO_HOME'],
+                          os.environ['SUMO_HOME']))
 
 ## ptlines2flows
 DEFAULT_PT_FLOWS = 'osm_pt.rou.xml'
@@ -211,7 +212,7 @@ def _call_generate_taz_buildings_from_osm(filename, single_taz, processes, admin
                              '--net', DEFAULT_NET_XML,
                              '--taz-output', DEFAULT_TAZ_OUTPUT_XML,
                              '--weight-output', DEFAULT_WEIGHT_OUTPUT_CSV,
-                             '--processes', str(processes),                             
+                             '--processes', str(processes),
                              '--poly-output', DEFAULT_BUILDINGS_PREFIX]
     if single_taz:
         taz_buildings_options.append('--single-taz')

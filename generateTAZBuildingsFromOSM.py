@@ -10,7 +10,6 @@
 """
 
 import argparse
-import collections
 import csv
 import logging
 import multiprocessing
@@ -67,10 +66,10 @@ def get_options(cmd_args=None):
     parser.set_defaults(single_taz=False)
     return parser.parse_args(cmd_args)
 
-class GenerateTAZandWeightsFromOSM(object):
+class GenerateTAZandWeightsFromOSM():
     """ Generate TAZ and Buildings weight from OSM."""
 
-    _param = None 
+    _param = None
 
     _osm = None
     _net = None
@@ -157,8 +156,8 @@ class GenerateTAZandWeightsFromOSM(object):
 
     @staticmethod
     def _is_admin_level(tags, level):
-        """ Check tags to find {'k': 'admin_level', 'v': '*'} and 
-            returns True iff the value has the given level. 
+        """ Check tags to find {'k': 'admin_level', 'v': '*'} and
+            returns True iff the value has the given level.
         """
         for tag in tags:
             if tag['k'] == 'admin_level' and tag['v'] == str(level):
@@ -321,7 +320,7 @@ class GenerateTAZandWeightsFromOSM(object):
             for ndid in way['nd']:
                 self._osm_buildings[way['id']]['nodes'].append(nodes[ndid['ref']])
         logging.info('Found %d buildings.', len(self._osm_buildings.keys()))
-    
+
     def _processing_buildings(self):
         """ Compute centroid and approximated area for each building (if necessary). """
         with multiprocessing.Pool(processes=self._param.processes) as pool:
@@ -338,8 +337,8 @@ class GenerateTAZandWeightsFromOSM(object):
             points.append([float(node['lat']), float(node['lon'])])
         centroid = numpy.mean(numpy.array(points), axis=0)
         building['tag'].append({
-                'k':  'centroid',
-                'v':  '{}, {}'.format(centroid[0], centroid[1])
+            'k':  'centroid',
+            'v':  '{}, {}'.format(centroid[0], centroid[1])
             })
         # compute the approximated area
         approx = geometry.MultiPoint(points).convex_hull
@@ -351,11 +350,11 @@ class GenerateTAZandWeightsFromOSM(object):
         if not numpy.isnan(converted_approximation.area):
             area = converted_approximation.area
         building['tag'].append({
-                'k':  'approx_area',
-                'v':  area
+            'k':  'approx_area',
+            'v':  area
             })
         return building
-  
+
     def _sort_buildings(self):
         """ Multiprocess helper to sort buildings to the right TAZ based on centroid. """
         with multiprocessing.Pool(processes=self._param.processes) as pool:
@@ -365,23 +364,23 @@ class GenerateTAZandWeightsFromOSM(object):
             for buildings in slices:
                 parameters = {
                     'buildings': buildings,
-                    'all_in_one': self._param.single_taz, 
-                    'taz': self._taz, 
+                    'all_in_one': self._param.single_taz,
+                    'taz': self._taz,
                     'net_file': self._param.net_file,
                 }
                 list_parameters.append(parameters)
             logging.info('Buildings to TAZ multiprocessing...')
             for res in pool.imap_unordered(self._sort_buildings_into_taz, list_parameters):
                 for id_taz, assocs in res.items():
-                    self._taz[id_taz]['buildings'] |= assocs['buildings'] 
-                    self._taz[id_taz]['buildings_cumul_area'] += assocs['buildings_cumul_area'] 
-    
+                    self._taz[id_taz]['buildings'] |= assocs['buildings']
+                    self._taz[id_taz]['buildings_cumul_area'] += assocs['buildings_cumul_area']
+
     @staticmethod
     def _sort_buildings_into_taz(parameters):
         """ Sort buildings to the right TAZ based on centroid. """
         ## global sumolib network
         sumo_net = sumolib.net.readNet(parameters['net_file'])
-        
+
         def _get_centroid(building):
             """ Return the lat lon of the centroid. """
             for tag in building['tag']:
@@ -395,8 +394,8 @@ class GenerateTAZandWeightsFromOSM(object):
             for tag in building['tag']:
                 if tag['k'] == 'approx_area':
                     return float(tag['v'])
-            return None     
-        
+            return None
+
         def _building_to_edge(id_taz, x_coord, y_coord, neighbours):
             """ Given the coords of a building, return te closest edge """
             centroid = (x_coord, y_coord)
@@ -405,8 +404,8 @@ class GenerateTAZandWeightsFromOSM(object):
             pedestrian_dist_edge = sys.float_info.max
 
             generic_edge_info = None
-            generic_dist_edge = sys.float_info.max            
-            
+            generic_dist_edge = sys.float_info.max
+
             for edge, _ in neighbours:
                 if edge.getID() not in parameters['taz'][id_taz]['edges']:
                     continue
@@ -422,10 +421,10 @@ class GenerateTAZandWeightsFromOSM(object):
 
             if generic_edge_info and generic_dist_edge > 500.0:
                 logging.info("A building entrance [passenger] is %d meters away.",
-                            generic_dist_edge)
+                             generic_dist_edge)
             if pedestrian_edge_info and pedestrian_dist_edge > 500.0:
                 logging.info("A building entrance [pedestrian] is %d meters away.",
-                            pedestrian_dist_edge)
+                             pedestrian_dist_edge)
 
             return generic_edge_info, pedestrian_edge_info
 
@@ -452,7 +451,7 @@ class GenerateTAZandWeightsFromOSM(object):
             area = int(_get_approx_area(building))
             if area <= 0:
                 ## there have been problems with the building conversion
-                    continue
+                continue
             lat, lon = _get_centroid(building)
             x_coord, y_coord = sumo_net.convertLonLat2XY(lon, lat)
             neighbours = sumo_net.getNeighboringEdges(x_coord, y_coord, r=1000.0)
@@ -473,7 +472,7 @@ class GenerateTAZandWeightsFromOSM(object):
                             associations[id_taz]['buildings'].add(
                                 (building['id'], area, gen_id, ped_id))
                             associations[id_taz]['buildings_cumul_area'] += area
-        return associations   
+        return associations
 
     _TAZS = """
 <tazs> {list_of_tazs}

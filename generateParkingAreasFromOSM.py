@@ -19,7 +19,6 @@ from tqdm import tqdm
 if 'SUMO_HOME' in os.environ:
     sys.path.append(os.path.join(os.environ['SUMO_HOME'], 'tools'))
     import sumolib
-    from sumolib.miscutils import euclidean
 else:
     sys.exit("please declare environment variable 'SUMO_HOME'")
 
@@ -51,7 +50,7 @@ def get_options(cmd_args=None):
                         'too close to an intersection.')
     return parser.parse_args(cmd_args)
 
-class ParkingAreasFromOSMGenerator(object):
+class ParkingAreasFromOSMGenerator():
     """ Generate the SUMO additional file for parkings based on OSM. """
 
     _options = None
