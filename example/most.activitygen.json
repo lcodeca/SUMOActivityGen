@@ -6,10 +6,10 @@
 
     "sumocfg": "most.duarouter.sumocfg",
 
-    "SUMOnetFile": "MoSTScenario/scenario/in/most.net.xml",
+    "SUMOnetFile": "MoSTScenario/tools/out/most.net.xml",
     "SUMOadditionals": {
         "vTypes": "MoSTScenario/scenario/in/add/basic.vType.xml",
-        "parkings": "MoSTScenario/scenario/in/add/most.parking.add.xml"
+        "parkings": "MoSTScenario/tools/out/most.parking.add.xml"
     },
 
     "intermodalOptions": {
@@ -20,9 +20,9 @@
 
     "population": {
         "entities" : 20000,
-        "tazDefinition": "MoSTScenario/tools/mobility/taz/most.complete.taz.xml",
-        "tazWeights": "MoSTScenario/tools/mobility/taz/most.complete.taz.weight.csv",
-        "buildingsWeight": "MoSTScenario/tools/mobility/taz/buildings/"
+        "tazDefinition": "MoSTScenario/tools/out/taz/most.complete.taz.xml",
+        "tazWeights": "MoSTScenario/tools/out/taz/most.complete.taz.weight.csv",
+        "buildingsWeight": "MoSTScenario/tools/out/taz/buildings/"
     },
 
     "taz": {

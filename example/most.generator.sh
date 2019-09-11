@@ -14,15 +14,16 @@ set -e
 MOBILITY_GENERATOR=$(pwd)
 ACTIVITYGEN=$MOBILITY_GENERATOR/..
 
-if [ ! -d "MoSTScenario" ]; then
+if [ ! -d "MoSTScenario" ]
+then
   git clone https://github.com/lcodeca/MoSTScenario.git
+else
+  cd MoSTScenario
+  git pull
+  cd $MOBILITY_GENERATOR
 fi
 
-SCENARIO="$MOBILITY_GENERATOR/MoSTScenario/scenario"
-MOBILITY_TOOLS="$MOBILITY_GENERATOR/MoSTScenario/tools/mobility"
-
-INPUT="$SCENARIO/in"
-ADD="$INPUT/add"
+SCENARIO="$MOBILITY_GENERATOR/MoSTScenario/tools"
 
 OUTPUT="most/rou"
 mkdir -p $OUTPUT
@@ -32,17 +33,17 @@ mkdir -p $OUTPUT
 INTERVAL="-b 0 -e 86400"
 
 echo "[$(date)] --> Generate bus trips..."
-python $SUMO_TOOLS/ptlines2flows.py -n $INPUT/most.net.xml $INTERVAL -p 900 \
+python $SUMO_TOOLS/ptlines2flows.py -n $SCENARIO/out/most.net.xml $INTERVAL -p 900 \
     --random-begin --seed 42 --no-vtypes \
-    --ptstops $ADD/most.busstops.add.xml --ptlines $MOBILITY_TOOLS/pt/most.buslines.add.xml \
+    --ptstops $SCENARIO/out/most.busstops.add.xml --ptlines $SCENARIO/out/most.buslines.add.xml \
     -o $OUTPUT/most.example.buses.flows.xml
 
 sed -e s/:0//g -i'' $OUTPUT/most.example.buses.flows.xml
 
 echo "[$(date)] --> Generate train trips..."
-python $SUMO_TOOLS/ptlines2flows.py -n $INPUT/most.net.xml $INTERVAL -p 1200 \
+python $SUMO_TOOLS/ptlines2flows.py -n $SCENARIO/out/most.net.xml $INTERVAL -p 1200 \
     -d 300 --random-begin --seed 42 --no-vtypes \
-    --ptstops $ADD/most.trainstops.add.xml --ptlines $MOBILITY_TOOLS/pt/most.trainlines.add.xml \
+    --ptstops $SCENARIO/out/most.trainstops.add.xml --ptlines $SCENARIO/out/most.trainlines.add.xml \
     -o $OUTPUT/most.example.trains.flows.xml
 
 sed -e s/:0//g -i'' $OUTPUT/most.example.trains.flows.xml

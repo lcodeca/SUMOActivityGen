@@ -4,7 +4,7 @@
     SUMO Activity-Based Mobility Generator
 
     Author: Lara CODECA
-    
+
     This program and the accompanying materials are made available under the
     terms of the Eclipse Public License 2.0 which is available at
     http://www.eclipse.org/legal/epl-2.0.
@@ -13,9 +13,9 @@
 <configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
 
     <input>
-        <net-file value="MoSTScenario/scenario/in/most.net.xml"/>
+        <net-file value="MoSTScenario/tools/out/most.net.xml"/>
         <route-files value="most/rou/most.example.buses.flows.xml,most/rou/most.example.trains.flows.xml"/>
-        <additional-files value="MoSTScenario/scenario/in/add/most.busstops.add.xml,MoSTScenario/scenario/in/add/most.trainstops.add.xml,MoSTScenario/scenario/in/add/most.parking.add.xml,MoSTScenario/scenario/in/add/basic.vType.xml"/>
+        <additional-files value="MoSTScenario/tools/out/most.busstops.add.xml,MoSTScenario/tools/out/most.trainstops.add.xml,MoSTScenario/tools/out/most.parking.add.xml,MoSTScenario/tools/out/most.rerouters.add.xml,MoSTScenario/scenario/in/add/basic.vType.xml"/>
     </input>
 
     <time>
