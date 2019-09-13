@@ -152,20 +152,22 @@ class ParkingAreasFromOSMGenerator():
         dist_edge = sys.float_info.max
         location = None
 
-        nearest_edges = self._net.getNeighboringEdges(parking['x'], parking['y'], r=1000.0)
-
-        for edge, _ in nearest_edges:
-            if not (edge.allows('passenger') and edge.allows('pedestrian')):
-                continue
-            if self._is_too_short(edge.getLength()):
-                continue
-            index, pos, dist = edge.getClosestLanePosDist((float(parking['x']),
-                                                           float(parking['y'])))
-            if dist < dist_edge:
-                edge_info = edge
-                lane_info = edge.getLane(index)
-                dist_edge = dist
-                location = pos
+        radius = 50.0
+        while not edge_info:
+            nearest_edges = self._net.getNeighboringEdges(parking['x'], parking['y'], r=radius)
+            for edge, _ in nearest_edges:
+                if not (edge.allows('passenger') and edge.allows('pedestrian')):
+                    continue
+                if self._is_too_short(edge.getLength()):
+                    continue
+                index, pos, dist = edge.getClosestLanePosDist((float(parking['x']),
+                                                               float(parking['y'])))
+                if dist < dist_edge:
+                    edge_info = edge
+                    lane_info = edge.getLane(index)
+                    dist_edge = dist
+                    location = pos
+            radius += 50.0
 
         if dist_edge > 50.0:
             logging.info("Alert: parking lots %s is %d meters from edge %s.",

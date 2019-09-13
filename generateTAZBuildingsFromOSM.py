@@ -396,7 +396,7 @@ class GenerateTAZandWeightsFromOSM():
                     return float(tag['v'])
             return None
 
-        def _building_to_edge(id_taz, x_coord, y_coord, neighbours):
+        def _building_to_edge(id_taz, x_coord, y_coord):
             """ Given the coords of a building, return te closest edge """
             centroid = (x_coord, y_coord)
 
@@ -406,18 +406,22 @@ class GenerateTAZandWeightsFromOSM():
             generic_edge_info = None
             generic_dist_edge = sys.float_info.max
 
-            for edge, _ in neighbours:
-                if edge.getID() not in parameters['taz'][id_taz]['edges']:
-                    continue
-                if edge.allows('rail'):
-                    continue
-                _, _, dist = edge.getClosestLanePosDist(centroid)
-                if edge.allows('passenger') and dist < generic_dist_edge:
-                    generic_edge_info = edge
-                    generic_dist_edge = dist
-                if edge.allows('pedestrian') and dist < pedestrian_dist_edge:
-                    pedestrian_edge_info = edge
-                    pedestrian_dist_edge = dist
+            radius = 50.0
+            while not pedestrian_edge_info or not generic_edge_info:
+                neighbours = sumo_net.getNeighboringEdges(x_coord, y_coord, r=radius)
+                for edge, _ in neighbours:
+                    if edge.getID() not in parameters['taz'][id_taz]['edges']:
+                        continue
+                    if edge.allows('rail'):
+                        continue
+                    _, _, dist = edge.getClosestLanePosDist(centroid)
+                    if edge.allows('passenger') and dist < generic_dist_edge:
+                        generic_edge_info = edge
+                        generic_dist_edge = dist
+                    if edge.allows('pedestrian') and dist < pedestrian_dist_edge:
+                        pedestrian_edge_info = edge
+                        pedestrian_dist_edge = dist
+                radius += 50.0
 
             if generic_edge_info and generic_dist_edge > 500.0:
                 logging.info("A building entrance [passenger] is %d meters away.",
@@ -428,9 +432,9 @@ class GenerateTAZandWeightsFromOSM():
 
             return generic_edge_info, pedestrian_edge_info
 
-        def _associate_building_to_edges(id_taz, x_coord, y_coord, neighbours):
+        def _associate_building_to_edges(id_taz, x_coord, y_coord):
             """ Adds a building to the specific TAZ. """
-            generic_edge, pedestrian_edge = _building_to_edge(id_taz, x_coord, y_coord, neighbours)
+            generic_edge, pedestrian_edge = _building_to_edge(id_taz, x_coord, y_coord)
             if generic_edge or pedestrian_edge:
                 gen_id = None
                 ped_id = None
@@ -454,10 +458,9 @@ class GenerateTAZandWeightsFromOSM():
                 continue
             lat, lon = _get_centroid(building)
             x_coord, y_coord = sumo_net.convertLonLat2XY(lon, lat)
-            neighbours = sumo_net.getNeighboringEdges(x_coord, y_coord, r=1000.0)
 
             if parameters['all_in_one']:
-                ret = _associate_building_to_edges('all', x_coord, y_coord, neighbours)
+                ret = _associate_building_to_edges('all', x_coord, y_coord)
                 if ret:
                     gen_id, ped_id = ret
                     associations['all']['buildings'].add((building['id'], area, gen_id, ped_id))
@@ -466,7 +469,7 @@ class GenerateTAZandWeightsFromOSM():
                 for id_taz in list(parameters['taz'].keys()):
                     if parameters['taz'][id_taz]['convex_hull'].contains(
                             geometry.Point(float(lon), float(lat))):
-                        ret = _associate_building_to_edges(id_taz, x_coord, y_coord, neighbours)
+                        ret = _associate_building_to_edges(id_taz, x_coord, y_coord)
                         if ret:
                             gen_id, ped_id = ret
                             associations[id_taz]['buildings'].add(
