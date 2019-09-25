@@ -96,6 +96,11 @@ def get_options(cmd_args=None):
         '--no-profiling', dest='profiling', action='store_false',
         help='Disable Python3 cProfile feature.')
     parser.set_defaults(profiling=False)
+    parser.add_argument(
+        '--local-defaults', dest='local_defaults', action='store_true',
+        help='Uses the default folder and files defined locally. If not enabled, uses the files '
+        'contained in the sumo/tools/contributed/saga folder.')
+    parser.set_defaults(local_defaults=False)
     return parser.parse_args(cmd_args)
 
 ## netconvert
@@ -280,11 +285,28 @@ def main(cmd_args):
     if args.from_step <= 0:
         logging.info('Copying default configuration files to destination.')
         shutil.copy(args.osm_file, args.out_dir)
-        shutil.copy('defaults/activitygen.json', args.out_dir)
-        shutil.copy('defaults/basic.vType.xml', args.out_dir)
-        shutil.copy('defaults/duarouter.sumocfg', args.out_dir)
-        shutil.copy('defaults/osm.netccfg', args.out_dir)
-        shutil.copy('defaults/osm.sumocfg', args.out_dir)
+        if args.local_defaults:
+            shutil.copy('defaults/activitygen.json', args.out_dir)
+            shutil.copy('defaults/basic.vType.xml', args.out_dir)
+            shutil.copy('defaults/duarouter.sumocfg', args.out_dir)
+            shutil.copy('defaults/osm.netccfg', args.out_dir)
+            shutil.copy('defaults/osm.sumocfg', args.out_dir)
+        else:
+            shutil.copy(
+                '{}/contributed/saga/defaults/activitygen.json'.format(os.environ['SUMO_TOOLS']),
+                args.out_dir)
+            shutil.copy(
+                '{}/contributed/saga/defaults/basic.vType.xml'.format(os.environ['SUMO_TOOLS']),
+                args.out_dir)
+            shutil.copy(
+                '{}/contributed/saga/defaults/duarouter.sumocfg'.format(os.environ['SUMO_TOOLS']),
+                args.out_dir)
+            shutil.copy(
+                '{}/contributed/saga/defaults/osm.netccfg'.format(os.environ['SUMO_TOOLS']),
+                args.out_dir)
+            shutil.copy(
+                '{}/contributed/saga/defaults/osm.sumocfg'.format(os.environ['SUMO_TOOLS']),
+                args.out_dir)
 
     args.osm_file = os.path.basename(args.osm_file)
     os.chdir(args.out_dir)
