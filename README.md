@@ -4,6 +4,8 @@ Activity-based Mobility Generation for SUMO Simulator
 
 Contacts: Lara CODECA [lara.codeca@gmail.com]
 
+Cite: L. Codeca and J. Haerri, "Multi-modal Activity-based Mobility Generation Applied to Microscopic Traffic Simulations", MobilTUM 2019
+
 This program and the accompanying materials are made available under the
 terms of the Eclipse Public License 2.0 which is available at <http://www.eclipse.org/legal/epl-2.0>.
 
