@@ -20,6 +20,7 @@ This project is in its early stages, and it is still under active development.
 
 The documentation is availalbe in the `docs` folder.
 
-### Due to some changes in the SUMO development version of the TraCI APIs, the master branch is not compatible with SUMO 1.2.0
+### Due to some changes in the SUMO development version of the TraCI APIs, the master branch may not compatible with SUMO 1.4.0
 
+* _Release v0.2 is compatible with SUMO 1.4.0_
 * _Release v0.1 is compatible with SUMO 1.2.0_
