@@ -967,6 +967,10 @@ class MobilityGenerator():
         """ Select a TAZ from an area using its weight. """
         selection = self._random_generator.uniform(0, 1)
         total_weight = sum([self._taz_weights[taz]['weight'] for taz in area])
+        if total_weight <= 0:
+            error_msg = 'Error with area {}, total sum of weights is {}. '.format(area, total_weight)
+            error_msg += 'It must be strictly positive.'
+            raise Exception(error_msg, [(taz, self._taz_weights[taz]['weight']) for taz in area])
         cumulative = 0.0
         for taz in area:
             cumulative += self._taz_weights[taz]['weight'] / total_weight
