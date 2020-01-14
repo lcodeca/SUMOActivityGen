@@ -443,6 +443,9 @@ class MobilityGenerator():
                         p_edge, edge, pType="pedestrian")
                 except traci.exceptions.TraCIException:
                     route = None
+                if route and not isinstance(route, list):
+                    # list in until SUMO 1.4.0 included, tuple onward
+                    route = list(route)
                 if route:
                     cost = self._cost_from_route(route)
                     if distance > cost:
@@ -502,7 +505,9 @@ class MobilityGenerator():
                     route = traci.simulation.findIntermodalRoute(
                         stage.fromEdge, p_edge, depart=_new_start_time, walkFactor=.9,
                         modes=_mode, pType=_ptype, vType=_vtype)
-
+                    if route and not isinstance(route, list):
+                        # list in until SUMO 1.4.0 included, tuple onward
+                        route = list(route)
                     if (self._is_valid_route(mode, route) and
                             route[-1].type == tc.STAGE_DRIVING):
                         route[-1].destStop = p_id
@@ -519,6 +524,9 @@ class MobilityGenerator():
                     ## build the walk back to the parking
                     walk_back = traci.simulation.findIntermodalRoute(
                         stage.toEdge, p_edge, walkFactor=.9, pType="pedestrian")
+                    if route and not isinstance(route, list):
+                        # list in until SUMO 1.4.0 included, tuple onward
+                        route = list(route)
                     walk_back[-1].arrivalPos = self._parking_position[p_id]
                     route.extend(walk_back)
 
@@ -532,6 +540,9 @@ class MobilityGenerator():
                     modes=_mode, pType=_ptype, vType=_vtype)
                 if not self._is_valid_route(mode, route):
                     route = None
+                if route and not isinstance(route, list):
+                    # list in until SUMO 1.4.0 included, tuple onward
+                    route = list(route)
                 if _mode != 'public' and route:
                     ## Check if the route is connected
                     _last_final = None
@@ -1078,7 +1089,8 @@ class MobilityGenerator():
             # traci failed
             return False
         _mode, _ptype, _vtype = self._get_mode_parameters(mode)
-        if not isinstance(route, list):
+        if not isinstance(route, (list, tuple)): 
+            # list in until SUMO 1.4.0 included, tuple onward
             # only for findRoute
             if len(route.edges) >= 2:
                 return True
