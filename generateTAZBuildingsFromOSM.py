@@ -503,6 +503,9 @@ class GenerateTAZandWeightsFromOSM():
     def _write_poly_files(self, prefix):
         """ Write the CSV file. """
         for value in self._taz.values():
+            print(value)
+            if not value['buildings']:
+                continue
             filename = '{}.{}.csv'.format(prefix, value['ref'])
             with open(filename, 'w') as csvfile:
                 csvwriter = csv.writer(csvfile, delimiter=',')
@@ -519,8 +522,10 @@ class GenerateTAZandWeightsFromOSM():
             csvwriter = csv.writer(csvfile, delimiter=',')
             csvwriter.writerow(['TAZ', 'Name', '#Nodes', 'Area'])
             for value in self._taz.values():
-                csvwriter.writerow([value['ref'], value['name'], len(value['nodes']),
-                                    value['area']])
+                num_nodes = len(value['nodes'])
+                if num_nodes <= 0: # the area is empty
+                    continue
+                csvwriter.writerow([value['ref'], value['name'], num_nodes, value['area']])
 
 def _parse_xml_file(xml_file):
     """ Extract all info from an OSM file. """
