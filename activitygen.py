@@ -243,7 +243,7 @@ class MobilityGenerator():
             for row in weightreader:
                 if not header:
                     header = row
-                else:
+                elif row: # ignoring empty lines
                     self._taz_weights[row[0]] = {
                         header[0]: row[0],
                         header[1]: row[1],
