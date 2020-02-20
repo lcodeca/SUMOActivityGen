@@ -17,6 +17,7 @@ import io
 import json
 import logging
 import os
+from pprint import pformat
 import pstats
 import sys
 import xml.etree.ElementTree
@@ -241,7 +242,9 @@ class MobilityGenerator():
             weightreader = csv.reader(csvfile)
             header = None
             for row in weightreader:
-                if not header:
+                if not row:
+                    continue # empty line
+                if header is None:
                     header = row
                 elif row: # ignoring empty lines
                     self._taz_weights[row[0]] = {
@@ -265,7 +268,9 @@ class MobilityGenerator():
                 taz = None
                 buildings = []
                 for row in weightreader:
-                    if not header:
+                    if not row:
+                        continue # empty line
+                    if header is None:
                         header = row
                     else:
                         taz = row[0]
@@ -295,6 +300,13 @@ class MobilityGenerator():
     ##                                Mobility Generation                                       ##
     ## ---------------------------------------------------------------------------------------- ##
 
+    @staticmethod
+    def _hash_final_chain(chain):
+        activities = list()
+        for pos in range(1, len(chain)+1):
+            activities.append(chain[pos].activity)
+        return pformat(activities)
+
     def _compute_entities_per_slice(self):
         """
         Compute the absolute number of entities that are going to be created
@@ -313,6 +325,7 @@ class MobilityGenerator():
         total = 0
 
         _modes_stats = collections.defaultdict(int)
+        _chains_stats = collections.defaultdict(int)
 
         for name, m_slice in self._conf['slices'].items():
             logging.info('[%s] Computing %d trips from %s to %s ... ',
@@ -380,9 +393,11 @@ class MobilityGenerator():
                         }
 
                         complete_trip = self._generate_sumo_trip_from_activitygen(_person_trip)
+
                         _person_trip['string'] = complete_trip
                         ## For statistical purposes.
                         _modes_stats[_selected_mode] += 1
+                        _chains_stats[self._hash_final_chain(_final_chain)] += 1
 
                     except TripGenerationGenericError:
                         _person_trip = None
@@ -411,8 +426,12 @@ class MobilityGenerator():
                 input("Press any key to continue..")
 
         logging.info('Generated %d trips.', total)
+        logging.info('Mode splits:')
         for mode, value in _modes_stats.items():
             logging.info('\t %s: %d (%.2f).', mode, value, float(value/total))
+        logging.info('Activity chains splits:')
+        for chain, value in _chains_stats.items():
+            logging.info('\t %s: %d (%.2f).', chain, value, float(value/total))
 
     ## ---- PARKING AREAS: location and selection ---- ##
 
@@ -471,14 +490,14 @@ class MobilityGenerator():
 
         _mode, _ptype, _vtype = self._get_mode_parameters(mode)
 
-        pos = 1
-        while pos in _person_stages:
+        for pos in range(1, len(_person_stages)+1):
             stage = _person_stages[pos]
+            logging.debug('STAGE %d: %s', pos, pformat(stage))
             # findIntermodalRoute(self, fromEdge, toEdge, modes='', depart=-1.0,
             #                     routingMode=0, speed=-1.0, walkFactor=-1.0,
             #                     departPos=0.0, arrivalPos=-1073741824, departPosLat=0.0,
             #                     pType='', vType='', destStop='')
-            if not _new_start_time:
+            if _new_start_time is None:
                 _new_start_time = stage.start
 
             if _person_steps:
@@ -490,6 +509,7 @@ class MobilityGenerator():
                     _last_final = _edges[-1]
                 logging.debug('_generate_mode_traci: %s vs %s', _last_final, stage.fromEdge)
                 if _last_final != stage.fromEdge:
+                    logging.warning('_generate_mode_traci generated an inconsistent plan.')
                     raise TripGenerationInconsistencyError(
                         '_generate_mode_traci generated an inconsistent plan.')
 
@@ -518,8 +538,7 @@ class MobilityGenerator():
                 if route:
                     ## build the waiting to destination (if required)
                     if stage.duration:
-                        wait = self._generate_waiting_stage(stage)
-                        route.append(wait)
+                        route.append(self._generate_waiting_stage(stage))
 
                     ## build the walk back to the parking
                     walk_back = traci.simulation.findIntermodalRoute(
@@ -549,17 +568,19 @@ class MobilityGenerator():
                     for step in route:
                         if _last_final:
                             if step.edges[0] != _last_final:
+                                logging.warning('_generate_mode_traci generated an inconsistent plan.')
                                 raise TripGenerationInconsistencyError(
                                     '_generate_mode_traci generated an inconsistent plan.')
                         _last_final = step.edges[-1]
 
+                if route:
                     ## Set the arrival position in the edge
                     route[-1].arrivalPos = stage.arrivalPos
                     ## Add stop
                     if stage.duration:
                         route.append(self._generate_waiting_stage(stage))
 
-            if not route:
+            if route is None:
                 raise TripGenerationRouteError(
                     'Route not found between {} and {}.'.format(stage.fromEdge, stage.toEdge))
 
@@ -568,7 +589,6 @@ class MobilityGenerator():
                 _new_start_time += step.travelTime
                 _person_steps.append(step)
 
-            pos += 1
         return _person_steps, _person_stages
 
     def _generate_trip(self, from_area, to_area, activity_chain, modes):
@@ -628,6 +648,7 @@ class MobilityGenerator():
             edges='{}_0'.format(stage.toEdge), travelTime=stage.duration, cost=stage.duration,
             vType=None, line=None, destStop=None, length=None, intended=None, depart=None,
             departPos=None, arrivalPos=None)
+        logging.debug('WAITING Stage: %s', pformat(wait))
         return wait
 
     def _stages_define_main_locations(self, from_area, to_area, mode):
@@ -968,7 +989,8 @@ class MobilityGenerator():
         selection = self._random_generator.uniform(0, 1)
         total_weight = sum([self._taz_weights[taz]['weight'] for taz in area])
         if total_weight <= 0:
-            error_msg = 'Error with area {}, total sum of weights is {}. '.format(area, total_weight)
+            error_msg = 'Error with area {}, total sum of weights is {}. '.format(
+                area, total_weight)
             error_msg += 'It must be strictly positive.'
             raise Exception(error_msg, [(taz, self._taz_weights[taz]['weight']) for taz in area])
         cumulative = 0.0
@@ -1093,7 +1115,7 @@ class MobilityGenerator():
             # traci failed
             return False
         _mode, _ptype, _vtype = self._get_mode_parameters(mode)
-        if not isinstance(route, (list, tuple)): 
+        if not isinstance(route, (list, tuple)):
             # list in until SUMO 1.4.0 included, tuple onward
             # only for findRoute
             if len(route.edges) >= 2:
@@ -1199,8 +1221,10 @@ class MobilityGenerator():
         stages = ''
         _last_arrival_pos = None
         _internal_consistency_check = []
+        _waiting_stages = []
         for stage in person['stages']:
             if stage.type == tc.STAGE_WAITING:
+                _waiting_stages.append(stage)
                 stages += self.WAIT.format(lane=stage.edges,
                                            duration=stage.travelTime,
                                            action=stage.description)
@@ -1235,12 +1259,12 @@ class MobilityGenerator():
                         end = stage.arrivalPos + self._conf['stopBufferDistance'] / 2.0
                         # ---- This check should not be necessary in a good scenario ---- #
                         if start < 0:
-                            logging.debug(
+                            logging.warning(
                                 '_generate_sumo_trip_from_activitygen: [%s] start: %f --> 0.0',
                                 _ride_id, start)
                             start = 0.0
                         if end > self._sumo_network.getEdge(stage.edges[-1]).getLength():
-                            logging.debug(
+                            logging.warning(
                                 '_generate_sumo_trip_from_activitygen: [%s] end: %f --> %f',
                                 _ride_id, end,
                                 self._sumo_network.getEdge(stage.edges[-1]).getLength())
@@ -1265,6 +1289,7 @@ class MobilityGenerator():
                         if _triggered_route:
                             ## check for contiguity
                             if _triggered_route[-1] != stage.edges[0]:
+                                logging.warning('Triggered vehicle has a broken route.')
                                 raise TripGenerationInconsistencyError(
                                     'Triggered vehicle has a broken route.')
                             ## remove the duplicated edge
@@ -1307,17 +1332,27 @@ class MobilityGenerator():
         ## internal consistency test
         if _internal_consistency_check:
             if person['stages'][0].type != tc.STAGE_DRIVING:
+                logging.warning('Triggered vehicle does not start from the beginning.')
                 raise TripGenerationInconsistencyError(
                     'Triggered vehicle does not start from the beginning.')
             if person['stages'][-2].type != tc.STAGE_DRIVING:
                 ## person['stages'][-1] is the stop
+                logging.warning('Triggered vehicle does not finish at the end.')
                 raise TripGenerationInconsistencyError(
                     'Triggered vehicle does not finish at the end.')
+
+        ## waiting stages consistency test
+        if not _waiting_stages:
+            logging.warning('Person plan does not have any waiting stages.')
+            raise TripGenerationInconsistencyError(
+                'Person plan does not have any waiting stages.')
 
         ## result
         complete_trip += triggered
         complete_trip += self.PERSON.format(
             id=person['id'], depart=person['depart'], stages=stages)
+
+        logging.debug('Complete trip: \n%s', complete_trip)
         return complete_trip
 
     def _saving_trips_to_files(self):
