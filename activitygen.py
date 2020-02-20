@@ -731,9 +731,12 @@ class MobilityGenerator():
                 person_stages[pos] = stage._replace(toEdge=destination)
         return person_stages
 
-    @staticmethod
-    def _stages_compute_start_time(person_stages):
+    def _stages_compute_start_time(self, person_stages, mode):
         """ Compute the real starting time for the activity chain. """
+
+        ## Mode split:
+        _mode, _ptype, _vtype = self._get_mode_parameters(mode)
+
         # Find the first 'start' defined.
         pos = 1
         while pos in person_stages:
@@ -743,12 +746,16 @@ class MobilityGenerator():
 
         start = person_stages[pos].start
         while pos in person_stages:
-            ett = 1800.0    # generic standard value
+            ett, route = None, None
             try:
-                ett = traci.simulation.findRoute(
-                    person_stages[pos].fromEdge, person_stages[pos].toEdge).travelTime
+                route = traci.simulation.findIntermodalRoute(
+                    person_stages[pos].fromEdge, person_stages[pos].toEdge, 
+                    modes=_mode, pType=_ptype, vType=_vtype)
+                ett = self._ett_from_route(route)
             except traci.exceptions.TraCIException:
-                pass
+                raise TripGenerationRouteError(
+                    'No solution foud for stage {} and modes {}.'.format(
+                        pformat(person_stages[pos]), mode))
             if pos-1 in person_stages:
                 if person_stages[pos-1].duration:
                     ett += person_stages[pos-1].duration
@@ -831,9 +838,7 @@ class MobilityGenerator():
 
         ## Remove the initial 'Home' stage and update the from of the second stage.
         person_stages[1] = person_stages[1]._replace(fromEdge=person_stages[0].fromEdge)
-        is_start_to_fix = True
         if person_stages[0].start:
-            is_start_to_fix = False
             person_stages[1] = person_stages[1]._replace(start=person_stages[0].stage)
         del person_stages[0]
 
@@ -843,10 +848,9 @@ class MobilityGenerator():
             person_stages[pos] = person_stages[pos]._replace(fromEdge=person_stages[pos-1].toEdge)
             pos += 1
 
-        ## IF NECESSARY, compute the real starting time for the activity chain.
-        if is_start_to_fix:
-            start = self._stages_compute_start_time(person_stages)
-            person_stages[1] = person_stages[1]._replace(start=start)
+        ## Compute the real starting time for the activity chain based on ETT and durations
+        start = self._stages_compute_start_time(person_stages, mode)
+        person_stages[1] = person_stages[1]._replace(start=start)
 
         ## Define the position of each location in the activity chain.
         person_stages = self._stages_define_locations_position(person_stages)
@@ -1141,6 +1145,14 @@ class MobilityGenerator():
         for stage in route:
             cost += stage.cost
         return cost
+
+    @staticmethod
+    def _ett_from_route(route):
+        """ Compute the route etimated travel time. """
+        ett = 0.0
+        for stage in route:
+            ett += stage.travelTime
+        return ett
 
     ## ---------------------------------------------------------------------------------------- ##
     ##                                Saving trips to files                                     ##
