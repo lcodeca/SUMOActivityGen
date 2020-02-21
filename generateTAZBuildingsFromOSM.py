@@ -503,7 +503,6 @@ class GenerateTAZandWeightsFromOSM():
     def _write_poly_files(self, prefix):
         """ Write the CSV file. """
         for value in self._taz.values():
-            print(value)
             if not value['buildings']:
                 continue
             filename = '{}.{}.csv'.format(prefix, value['ref'])
