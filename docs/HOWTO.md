@@ -31,16 +31,17 @@ Optional parameters:
   --taz-plot                Plots the TAZs to an HTML file as OSM overlay. (Requires folium)
   --from-step FROM_STEP     For successive iteration of the script,
                             it defines from which step it should start:
-                            [0 - Copy default files.]
-                            [1 - Run netconvert & polyconvert.]
-                            [2 - Run ptlines2flows.py.]
-                            [3 - Generate parking areas.]
-                            [4 - Generate parking area rerouters.]
-                            [5 - Extract TAZ from administrative boundaries.]
-                            [6 - Generate OD-matrix.]
-                            [7 - Generate SUMOActivityGen defaults.]
-                            [8 - Run SUMOActivityGen.]
-                            [9 - Launch SUMO.]
+                            [ 0 - Copy default files.]
+                            [ 1 - Run netconvert & polyconvert.]
+                            [ 2 - Run ptlines2flows.py.]
+                            [ 3 - Generate parking areas.]
+                            [ 4 - Generate parking area rerouters.]
+                            [ 5 - Extract TAZ from administrative boundaries.]
+                            [ 6 - Generate OD-matrix.]
+                            [ 7 - Generate SUMOActivityGen defaults.]
+                            [ 8 - Run SUMOActivityGen.]
+                            [ 9 - Launch SUMO.]
+                            [10 - Report.]
   --profiling               Enable Python3 cProfile feature.
   --no-profiling            [default] Disable Python3 cProfile feature.
 ```

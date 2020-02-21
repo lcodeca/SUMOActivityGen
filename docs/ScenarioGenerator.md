@@ -13,16 +13,17 @@ Depending on the OSM file and the requirements, additional parameters can be use
 * `--admin-level` is used to filter the administrative boundaries using the `admin_level` values in OSM. This paprameter tunes `generateTAZBuildingsFromOSM.py`.
 * `--taz-plot` is used to plot the generated TAZs as an OSM overlay in a HTML file. It requires the folium library. This paprameter tunes `generateTAZBuildingsFromOSM.py`.
 * `--from-step` is used for successive iteration of the program after a manual change of the files. The number defines from which step the generation should be recomputed:
-  * 0 - Copy default files.
-  * 1 - Run netconvert & polyconvert.
-  * 2 - Run [ptlines2flows.py](https://github.com/eclipse/sumo/blob/master/tools/ptlines2flows.py).
-  * 3 - Generate parking areas using [generateParkingAreasFromOSM.py](../generateParkingAreasFromOSM.py).
-  * 4 - Generate parking area rerouters using [generateParkingAreaRerouters.py](https://github.com/eclipse/sumo/blob/master/tools/generateParkingAreaRerouters.py).
-  * 5 - Extract TAZ from administrative boundaries using [generateTAZBuildingsFromOSM.py](../generateTAZBuildingsFromOSM.py).
-  * 6 - Generate OD-matrix using [generateAmitranFromTAZWeights.py](../generateAmitranFromTAZWeights.py)
-  * 7 - Generate SUMOActivityGen defaults using [generateDefaultsActivityGen.py](../generateDefaultsActivityGen.py).
-  * 8 - Run the actual activity generation using [activitygen.py](../activitygen.py).
-  * 9 - Launch SUMO.
+  *  0 - Copy default files.
+  *  1 - Run netconvert & polyconvert.
+  *  2 - Run [ptlines2flows.py](https://github.com/eclipse/sumo/blob/master/tools/ptlines2flows.py).
+  *  3 - Generate parking areas using [generateParkingAreasFromOSM.py](../generateParkingAreasFromOSM.py).
+  *  4 - Generate parking area rerouters using [generateParkingAreaRerouters.py](https://github.com/eclipse/sumo/blob/master/tools/generateParkingAreaRerouters.py).
+  *  5 - Extract TAZ from administrative boundaries using [generateTAZBuildingsFromOSM.py](../generateTAZBuildingsFromOSM.py).
+  *  6 - Generate OD-matrix using [generateAmitranFromTAZWeights.py](../generateAmitranFromTAZWeights.py)
+  *  7 - Generate SUMOActivityGen defaults using [generateDefaultsActivityGen.py](../generateDefaultsActivityGen.py).
+  *  8 - Run the actual activity generation using [activitygen.py](../activitygen.py).
+  *  9 - Launch SUMO.
+  * 10 - Report.
 * `--profiling` is used to enable the Python 3 cProfile feature.
 * `--no-profiling` is the default option and it disables the Python 3 cProfile feature.
 
@@ -82,3 +83,11 @@ The complete list of parameters is:
 * `--od-amitran` is the OD matrix in Amitran format.
 * `--out` is the output file.
 * `--population` is the number of entities to generate.
+
+## Report: sagaActivityReport.py
+
+The program `sagaActivityReport.py` starts from the tripinfo file generated from sumo and computes the average starting time and duration for each activity type defined in the `activitygen.py` configuration file.
+The complete list of parameters is:
+
+* `----tripinfo` is the SUMO tripinfo.xml output file.
+* `--out` is the output file.

@@ -20,13 +20,20 @@
 
     <time>
         <begin value="0.0"/>
-        <step-length value="0.5"/>
+        <step-length value="1"/>
         <end value="86400.0"/>
     </time>
 
+    <output>
+        <output-prefix value='output.'/>
+        <summary-output value="summary.xml"/>
+        <tripinfo-output value="tripinfo.xml"/>
+        <tripinfo-output.write-unfinished value="false"/>
+    </output>
+
     <processing>
         <ignore-route-errors value="true"/>
-        <lateral-resolution value="0.3"/>
+        <lateral-resolution value="0.8"/>
         <ignore-junction-blocker value="60"/>
         <collision.action value="teleport"/>
         <time-to-teleport value="300"/>
@@ -48,8 +55,10 @@
 
     <report>
         <verbose value="true"/>
-        <duration-log.statistics value="true"/>
         <no-step-log value="true"/>
+        <duration-log.statistics value="true"/>
+        <duration-log.disable value="false"/>
+        <no-warnings value="false"/>
     </report>
 
     <random_number>

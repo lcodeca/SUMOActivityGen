@@ -1,7 +1,7 @@
 {
     "seed": 42,
     "maxNumTry": 10,
-    "outputPrefix": "osm_activitygen.",
+    "outputPrefix": "osm_activitygen",
     "mergeRoutesFiles": true,
 
     "sumocfg": "duarouter.sumocfg",

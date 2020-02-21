@@ -26,11 +26,13 @@ import generateTAZBuildingsFromOSM
 import generateAmitranFromTAZWeights
 import generateDefaultsActivityGen
 import activitygen
+import sagaActivityReport
 
 if 'SUMO_HOME' in os.environ:
     sys.path.append(os.path.join(os.environ['SUMO_HOME'], 'tools'))
     import ptlines2flows
     import generateParkingAreaRerouters
+    from visualization import plot_summary
 else:
     sys.exit("please declare environment variable 'SUMO_HOME'")
 
@@ -79,16 +81,17 @@ def get_options(cmd_args=None):
     parser.add_argument(
         '--from-step', type=int, dest='from_step', default=0,
         help='For successive iteration of the script, it defines from which step it should start: '
-             '[0 - Copy default files.] '
-             '[1 - Run netconvert & polyconvert.] '
-             '[2 - Run ptlines2flows.py.] '
-             '[3 - Generate parking areas.] '
-             '[4 - Generate parking area rerouters.] '
-             '[5 - Extract TAZ from administrative boundaries.] '
-             '[6 - Generate OD-matrix.] '
-             '[7 - Generate SUMOActivityGen defaults.] '
-             '[8 - Run SUMOActivityGen.] '
-             '[9 - Launch SUMO.] ')
+             '[ 0 - Copy default files.] '
+             '[ 1 - Run netconvert & polyconvert.] '
+             '[ 2 - Run ptlines2flows.py.] '
+             '[ 3 - Generate parking areas.] '
+             '[ 4 - Generate parking area rerouters.] '
+             '[ 5 - Extract TAZ from administrative boundaries.] '
+             '[ 6 - Generate OD-matrix.] '
+             '[ 7 - Generate SUMOActivityGen defaults.] '
+             '[ 8 - Run SUMOActivityGen.] '
+             '[ 9 - Launch SUMO.] '
+             '[10 - Report.] ')
     parser.add_argument(
         '--profiling', dest='profiling', action='store_true',
         help='Enable Python3 cProfile feature.')
@@ -144,6 +147,11 @@ DEAFULT_SPECIFIC_AG_CONG = 'osm_activitygen.json'
 
 ## SUMO
 DEFAULT_SUMOCFG = 'osm.sumocfg'
+DEFAULT_TRIPINFO_FILE = 'output.tripinfo.xml'
+DEFAULT_SUMMARY_FILE = 'output.summary.xml'
+
+## SAGA Report
+DEFAULT_REPORT_FILE = 'activities_report.json'
 
 def _call_netconvert(filename, lefthand):
     """ Call netconvert using a subprocess. """
@@ -268,6 +276,19 @@ def _call_sumo():
     """ Call SUMO using a subprocess. """
     subprocess.call(['sumo', '-c', DEFAULT_SUMOCFG])
 
+def _call_saga_activity_report():
+    """ Call directly sagaActivityReport from SUMOActivityGen.. """
+    report_options = ['--tripinfo', DEFAULT_TRIPINFO_FILE,
+                      '--out', DEFAULT_REPORT_FILE]
+    sagaActivityReport.main(report_options)
+
+def _call_plot_summary():
+    """ Call directly plot_summary from sumo/tools """
+    plot_options = ['-i', DEFAULT_SUMMARY_FILE,
+                    '-o', 'summary.png',
+                    '--xtime1', '--verbose', '--blind']
+    plot_summary.main(plot_options)
+
 def main(cmd_args):
     """ Complete Scenario Generator. """
 
@@ -356,6 +377,11 @@ def main(cmd_args):
     if args.from_step <= 9:
         logging.info('Launch sumo.')
         _call_sumo()
+    
+    if args.from_step <= 10:
+        logging.info('Report.')
+        _call_saga_activity_report()
+        _call_plot_summary()
 
     ## ========================              PROFILER              ======================== ##
     if args.profiling:
