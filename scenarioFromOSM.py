@@ -165,7 +165,7 @@ def _call_netconvert(filename, lefthand):
                           '--type-files', DEFAULT_TYPE_FILES]
     if lefthand:
         netconvert_options.append('--lefthand')
-    subprocess.call(netconvert_options)
+    subprocess.check_call(netconvert_options)
 
 def _call_pt_lines_to_flows():
     """ Call directly ptlines2flows from sumo/tools. """
@@ -217,7 +217,7 @@ def _call_polyconvert(filename):
                            '--osm', filename,
                            '--net', DEFAULT_NET_XML,
                            '-o', DEFAULT_POLY_XML]
-    subprocess.call(polyconvert_options)
+    subprocess.check_call(polyconvert_options)
 
 def _call_generate_taz_buildings_from_osm(filename, single_taz, processes, admin_level, plot):
     """ Call directly generateTAZBuildingsFromOSM from SUMOActivityGen. """
@@ -274,7 +274,7 @@ def _add_rou_to_default_sumocfg():
 
 def _call_sumo():
     """ Call SUMO using a subprocess. """
-    subprocess.call(['sumo', '-c', DEFAULT_SUMOCFG])
+    subprocess.check_call(['sumo', '-c', DEFAULT_SUMOCFG])
 
 def _call_saga_activity_report():
     """ Call directly sagaActivityReport from SUMOActivityGen.. """
