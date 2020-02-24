@@ -343,8 +343,8 @@ class GenerateTAZandWeightsFromOSM():
         # compute the approximated area
         approx = geometry.MultiPoint(points).convex_hull
         # http://openstreetmapdata.com/info/projections
-        proj = partial(pyproj.transform, pyproj.Proj(init='epsg:4326'),
-                       pyproj.Proj(init='epsg:3857'))
+        proj = partial(pyproj.transform, pyproj.Proj('epsg:4326'),
+                       pyproj.Proj('epsg:3857'))
         converted_approximation = transform(proj, approx)
         area = 0.0
         if not numpy.isnan(converted_approximation.area):
