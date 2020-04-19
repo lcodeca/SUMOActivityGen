@@ -37,13 +37,10 @@ def get_options(cmd_args=None):
 class AmitranFromTAZWeightsGenerator():
     """ Generate the default Amitran OD-matrix from TAZ weights. """
 
-    _options = None
-    _taz_weights = dict()
-    _odpairs = list()
-
     def __init__(self, options):
-
         self._options = options
+        self._taz_weights = dict()
+        self._odpairs = list()
         self._load_weights_from_csv()
         self._generate_odpairs_from_taz()
 

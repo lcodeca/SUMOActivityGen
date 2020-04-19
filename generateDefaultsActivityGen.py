@@ -40,13 +40,11 @@ def get_options(cmd_args=None):
 class ActivitygenDefaultGenerator():
     """ Generate the default values for SUMOActivityGen. """
 
-    _options = None
-    _config_struct = None
-    _amitran_struct = None
-
     def __init__(self, options):
 
         self._options = options
+        self._config_struct = None
+        self._amitran_struct = None
         self._load_configurations()
         self._load_odmatrix()
         self._generate_taz()

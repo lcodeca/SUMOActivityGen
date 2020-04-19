@@ -69,28 +69,24 @@ def get_options(cmd_args=None):
 class GenerateTAZandWeightsFromOSM():
     """ Generate TAZ and Buildings weight from OSM."""
 
-    _param = None
-
-    _osm = None
-    _net = None
-
-    _osm_boundaries = {
-        'relation': {},
-        'way': {},
-        'node': {},
-    }
-    _osm_buildings = dict()
-    _taz = dict()
-
-    _center = {
-        'lat': 0.0,
-        'lon': 0.0,
-    }
+    
 
     def __init__(self, parameters):
         self._param = parameters
         self._osm = _parse_xml_file(self._param.osm_file)
         self._net = sumolib.net.readNet(self._param.net_file)
+
+        self._osm_boundaries = {
+            'relation': {},
+            'way': {},
+            'node': {},
+        }
+        self._osm_buildings = dict()
+        self._taz = dict()
+        self._center = {
+            'lat': 0.0,
+            'lon': 0.0,
+        }
 
         logging.info('Filtering administrative boudaries from OSM..')
         self._filter_boundaries_from_osm()
