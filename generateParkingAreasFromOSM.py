@@ -53,21 +53,13 @@ def get_options(cmd_args=None):
 class ParkingAreasFromOSMGenerator():
     """ Generate the SUMO additional file for parkings based on OSM. """
 
-    _options = None
-
-    _osm = None
-    _net = None
-
-    _parkings_edges_dict = dict()
-
-    _osm_parkings = dict()
-    _sumo_parkings = dict()
-
     def __init__(self, options):
-
         self._options = options
         self._osm = self._parse_xml_file(options.osm_file)
         self._net = sumolib.net.readNet(options.net_file)
+        self._parkings_edges_dict = dict()
+        self._osm_parkings = dict()
+        self._sumo_parkings = dict()
 
     def parkings_generation(self):
         """ Main finction to generate all the parking areas. """
@@ -125,8 +117,9 @@ class ParkingAreasFromOSMGenerator():
 
     _PARKING_DICT = {
         'amenity': ['parking', 'motorcycle_parking', 'parking_entrance'],
+        'name': ['underground parking'],
         'parking': ['surface', 'underground', 'multi-storey'],
-        'name': ['underground parking']
+        'service': ['parking_aisle'],
     }
 
     def _is_parkings(self, tag):
@@ -153,21 +146,31 @@ class ParkingAreasFromOSMGenerator():
         location = None
 
         radius = 50.0
-        while not lane_info:
-            nearest_lanes = self._net.getNeighboringLanes(parking['x'], parking['y'], r=radius)
-            for lane, _ in nearest_lanes:
-                edge = lane.getEdge()
-                if not (lane.allows('passenger') and edge.allows('pedestrian')):
+        while not edge_info:
+            nearest_edges = self._net.getNeighboringEdges(parking['x'], parking['y'], r=radius)
+            for edge, _ in nearest_edges:
+                if not (edge.allows('passenger') and edge.allows('pedestrian')):
                     continue
-                if self._is_too_short(lane.getLength()):
+                if self._is_too_short(edge.getLength()):
                     continue
-                pos, dist = lane.getClosestLanePosAndDist((float(parking['x']), 
-                                                           float(parking['y'])))
-                if dist < dist_lane:
-                    edge_info = edge
-                    lane_info = lane
-                    dist_lane = dist
-                    location = pos
+
+                # select the lane closer to the curb
+                selected_lane = None
+                for lane in edge.getLanes():
+                    if not lane.allows('passenger'):
+                        continue
+                    selected_lane = lane
+                    break
+
+                if selected_lane is not None:
+
+                    pos, dist = selected_lane.getClosestLanePosAndDist(
+                        (float(parking['x']), float(parking['y'])))
+                    if dist < dist_lane:
+                        edge_info = edge
+                        lane_info = selected_lane
+                        dist_lane = dist
+                        location = pos
             radius += 50.0
 
         if dist_lane > 50.0:
