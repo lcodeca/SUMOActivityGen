@@ -79,7 +79,6 @@ Activity = collections.namedtuple(
 class TripGenerationGenericError(Exception):
     """ During the trip generation, various erroroneous states can be reached.
     """
-    message = None
     def __init__(self, message=None):
         """ Init the error message. """
         super().__init__()
@@ -90,37 +89,49 @@ class TripGenerationGenericError(Exception):
 class TripGenerationActivityError(TripGenerationGenericError):
     """ During the generation from the activity chains, various erroroneous states can be reached.
     """
-    message = None
-    def __init__(self, message=None):
+    def __init__(self, message=None, activity=None):
         """ Init the error message. """
         super().__init__()
         self.message = message
-        if self.message:
+        self.activity = activity
+        if self.message is not None:
             logging.debug(self.message)
+        if self.activity is not None:
+            with open('TripGenerationActivityError.log', 'a') as openfile:
+                openfile.write(message + '\n')
+                openfile.write(pformat(activity) + '\n')
 
 class TripGenerationRouteError(TripGenerationGenericError):
     """ During the step by step generation of the trip, it is possible to reach a state in which
         some of the chosen locations are impossible to reach.
     """
-    message = None
-    def __init__(self, message=None):
+    def __init__(self, message=None, route=None):
         """ Init the error message. """
         super().__init__()
         self.message = message
-        if self.message:
+        self.route = route
+        if self.message is not None:
             logging.debug(self.message)
+        if self.route is not None:
+            with open('TripGenerationRouteError.log', 'a') as openfile:
+                openfile.write(message + '\n')
+                openfile.write(pformat(route) + '\n')
 
 class TripGenerationInconsistencyError(TripGenerationGenericError):
     """ During the step by step generation of the trip, it is possible to reach a state in which
         some of the chosen modes are impossible to be used in that order.
     """
-    message = None
-    def __init__(self, message=None):
+    def __init__(self, message=None, plan=None):
         """ Init the error message. """
         super().__init__()
         self.message = message
-        if self.message:
+        self.plan = plan
+        if self.message is not None:
             logging.debug(self.message)
+        if self.plan is not None:
+            with open('TripGenerationInconsistencyError.log', 'a') as openfile:
+                openfile.write(message + '\n')
+                openfile.write(pformat(plan) + '\n')
 
 class ModeShare(Enum):
     """ Selector between two interpretation of the values used for the modes:
@@ -511,7 +522,8 @@ class MobilityGenerator():
                 if _last_final != stage.fromEdge:
                     logging.warning('_generate_mode_traci generated an inconsistent plan.')
                     raise TripGenerationInconsistencyError(
-                        '_generate_mode_traci generated an inconsistent plan.')
+                        '_generate_mode_traci generated an inconsistent plan.',
+                        _person_steps)
 
             route = None
 
@@ -570,7 +582,8 @@ class MobilityGenerator():
                             if step.edges[0] != _last_final:
                                 logging.warning('_generate_mode_traci generated an inconsistent plan.')
                                 raise TripGenerationInconsistencyError(
-                                    '_generate_mode_traci generated an inconsistent plan.')
+                                    '_generate_mode_traci generated an inconsistent plan.',
+                                    route)
                         _last_final = step.edges[-1]
 
                 if route:
@@ -636,8 +649,9 @@ class MobilityGenerator():
             best = sorted(solutions)[0] ## Ascending.
             trip = (best[2], best[1], best[3]) ## _person_stages, _person_steps, mode
         else:
-            raise TripGenerationRouteError('No solution foud for chain {} and modes {}.'.format(
-                activity_chain, _interpr_modes))
+            raise TripGenerationRouteError(
+                'No solution foud for chain {} and modes {}.'.format(activity_chain, 
+                                                                     _interpr_modes))
         return trip
 
     @staticmethod
@@ -726,7 +740,8 @@ class MobilityGenerator():
                     destination = self._random_location_ellipse(home, primary)
                 else:
                     raise TripGenerationActivityError(
-                        'Invalid sequence in the activity chain: {} --> {}'.format(_prec, _succ))
+                        'Invalid sequence in the activity chain: {} --> {}'.format(_prec, _succ),
+                        person_stages)
 
                 person_stages[pos] = stage._replace(toEdge=destination)
         return person_stages
@@ -861,7 +876,8 @@ class MobilityGenerator():
         while pos in person_stages:
             if person_stages[pos].fromEdge != last_edge:
                 raise TripGenerationActivityError(
-                    'Inconsistency in the locations for the chain of activities.')
+                    'Inconsistency in the locations for the chain of activities.',
+                    person_stages)
             last_edge = person_stages[pos].toEdge
             pos += 1
 
@@ -1303,7 +1319,8 @@ class MobilityGenerator():
                             if _triggered_route[-1] != stage.edges[0]:
                                 logging.warning('Triggered vehicle has a broken route.')
                                 raise TripGenerationInconsistencyError(
-                                    'Triggered vehicle has a broken route.')
+                                    'Triggered vehicle has a broken route.',
+                                    pformat(person['stages']))
                             ## remove the duplicated edge
                             _triggered_route.extend(stage.edges[1:])
                         else:
@@ -1346,18 +1363,21 @@ class MobilityGenerator():
             if person['stages'][0].type != tc.STAGE_DRIVING:
                 logging.warning('Triggered vehicle does not start from the beginning.')
                 raise TripGenerationInconsistencyError(
-                    'Triggered vehicle does not start from the beginning.')
+                    'Triggered vehicle does not start from the beginning.',
+                    pformat(person['stages']))
             if person['stages'][-2].type != tc.STAGE_DRIVING:
                 ## person['stages'][-1] is the stop
                 logging.warning('Triggered vehicle does not finish at the end.')
                 raise TripGenerationInconsistencyError(
-                    'Triggered vehicle does not finish at the end.')
+                    'Triggered vehicle does not finish at the end.',
+                    pformat(person['stages']))
 
         ## waiting stages consistency test
         if not _waiting_stages:
             logging.warning('Person plan does not have any waiting stages.')
             raise TripGenerationInconsistencyError(
-                'Person plan does not have any waiting stages.')
+                'Person plan does not have any waiting stages.',
+                pformat(person['stages']))
 
         ## result
         complete_trip += triggered
