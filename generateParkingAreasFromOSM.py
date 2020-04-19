@@ -149,29 +149,30 @@ class ParkingAreasFromOSMGenerator():
 
         edge_info = None
         lane_info = None
-        dist_edge = sys.float_info.max
+        dist_lane = sys.float_info.max
         location = None
 
         radius = 50.0
-        while not edge_info:
-            nearest_edges = self._net.getNeighboringEdges(parking['x'], parking['y'], r=radius)
-            for edge, _ in nearest_edges:
-                if not (edge.allows('passenger') and edge.allows('pedestrian')):
+        while not lane_info:
+            nearest_lanes = self._net.getNeighboringLanes(parking['x'], parking['y'], r=radius)
+            for lane, _ in nearest_lanes:
+                edge = lane.getEdge()
+                if not (lane.allows('passenger') and edge.allows('pedestrian')):
                     continue
-                if self._is_too_short(edge.getLength()):
+                if self._is_too_short(lane.getLength()):
                     continue
-                index, pos, dist = edge.getClosestLanePosDist((float(parking['x']),
-                                                               float(parking['y'])))
-                if dist < dist_edge:
+                pos, dist = lane.getClosestLanePosAndDist((float(parking['x']), 
+                                                           float(parking['y'])))
+                if dist < dist_lane:
                     edge_info = edge
-                    lane_info = edge.getLane(index)
-                    dist_edge = dist
+                    lane_info = lane
+                    dist_lane = dist
                     location = pos
             radius += 50.0
 
-        if dist_edge > 50.0:
-            logging.info("Alert: parking lots %s is %d meters from edge %s.",
-                         parking['id'], dist_edge, edge_info.getID())
+        if dist_lane > 50.0:
+            logging.info("Alert: parking lots %s is %d meters from lane %s.",
+                         parking['id'], dist_lane, lane_info.getID())
 
         return (edge_info, lane_info, location)
 
