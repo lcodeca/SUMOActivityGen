@@ -397,23 +397,23 @@ def main(cmd_args):
         _call_generate_parking_area_rerouters(args.processes)
 
     if args.from_step <= 5 and args.to_step >= 5:
+        logging.info('Generate taxi stands rerouters using tools/generateParkingAreaRerouters.py')
+        _call_generate_parking_area_rerouters_for_stands(args.processes)
+
+    if args.from_step <= 6 and args.to_step >= 6:
+        logging.info('Generate the default values for the activity based mobility generator. ')
+        _call_generate_defaults_activitygen(args.population)
+
+    if args.from_step <= 7 and args.to_step >= 7:
         logging.info('Generate TAZ from administrative boundaries, TAZ weights using buildings and '
                      'PoIs and the buildings infrastructure.')
         os.makedirs('buildings', exist_ok=True)
         _call_generate_taz_buildings_from_osm(args.osm_file, args.single_taz, args.processes,
                                               args.admin_level, args.html_filename)
 
-    if args.from_step <= 6 and args.to_step >= 6:
+    if args.from_step <= 8 and args.to_step >= 8:
         logging.info('Generate the default OD-Matrix in Amitran format. ')
         _call_generate_amitran_from_taz_weights(args.density)
-
-    if args.from_step <= 7  and args.to_step >= 7:
-        logging.info('Generate taxi stands location.')
-        _call_generate_taxi_stands_from_osm(args.osm_file)
-
-    if args.from_step <= 8 and args.to_step >= 8:
-        logging.info('Generate taxi stands rerouters using tools/generateParkingAreaRerouters.py')
-        _call_generate_parking_area_rerouters_for_stands(args.processes)
 
     if args.from_step <= 9 and args.to_step >= 9:
         logging.info('Generate the default values for the activity based mobility generator. ')
