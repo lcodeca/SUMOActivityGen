@@ -1230,12 +1230,12 @@ class MobilityGenerator():
     <vehicle id="{id}" type="{v_type}" depart="triggered" departPos="{depart}">{route}{stops}
     </vehicle>"""
 
-    def _get_stopping_lane(self, edge):
+    def _get_stopping_lane(self, edge, vtype):
         """ Returns the vehicle-friendly stopping lange closer to the sidewalk. """
         for lane in self._sumo_network.getEdge(edge).getLanes():
-            if lane.allows('passenger'):
+            if lane.allows(vtype):
                 return lane.getID()
-        raise TripGenerationGenericError("'passenger' cannot stop on edge {}".format(edge))
+        raise TripGenerationGenericError('"{}" cannot stop on edge {}'.format(vtype, edge))
 
     def _generate_sumo_trip_from_activitygen(self, person):
         """ Generate the XML string for SUMO route file from a person-trip. """
@@ -1299,7 +1299,7 @@ class MobilityGenerator():
                             end = self._sumo_network.getEdge(stage.edges[-1]).getLength()
                         ## ------------------------------------------------------------- ##
                         _stop = self.ONDEMAND_TRIGGERED.format(
-                            lane=self._get_stopping_lane(stage.edges[-1]),
+                            lane=self._get_stopping_lane(stage.edges[-1], _vtype),
                             start=start, end=end)
                         if _last_arrival_pos:
                             triggered += self.VEHICLE_TRIGGERED_DEPART.format(
@@ -1332,7 +1332,7 @@ class MobilityGenerator():
                         if stage.travelTime == LAST_STOP_PLACEHOLDER:
                             # print('final stop')
                             _stop = self.FINAL_STOP.format(
-                                lane=self._get_stopping_lane(stage.edges[-1]))
+                                lane=self._get_stopping_lane(stage.edges[-1], _triggered_vtype))
                         else:
                             if stage.destStop:
                                 # print('parking')
@@ -1343,7 +1343,7 @@ class MobilityGenerator():
                                 start = stage.arrivalPos - self._conf['stopBufferDistance'] / 2.0
                                 end = stage.arrivalPos + self._conf['stopBufferDistance'] / 2.0
                                 _stop = self.STOP_EDGE_TRIGGERED.format(
-                                    lane=self._get_stopping_lane(stage.edges[-1]),
+                                    lane=self._get_stopping_lane(stage.edges[-1], _triggered_vtype),
                                     person=person['id'], start=start, end=end)
                         _triggered_stops += _stop
 
