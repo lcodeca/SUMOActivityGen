@@ -24,6 +24,7 @@ from xml.etree import ElementTree
 import generateParkingAreasFromOSM
 import generateTAZBuildingsFromOSM
 import generateAmitranFromTAZWeights
+import generateTaxiStandsFromOSM
 import generateDefaultsActivityGen
 import activitygen
 import sagaActivityReport
@@ -88,10 +89,12 @@ def get_options(cmd_args=None):
              '[ 4 - Generate parking area rerouters.] '
              '[ 5 - Extract TAZ from administrative boundaries.] '
              '[ 6 - Generate OD-matrix.] '
-             '[ 7 - Generate SUMOActivityGen defaults.] '
-             '[ 8 - Run SUMOActivityGen.] '
-             '[ 9 - Launch SUMO.] '
-             '[10 - Report.] ')
+             '[ 7 - Generate taxi stands.] '
+             '[ 8 - Generate taxi stands rerouters.] '
+             '[ 9 - Generate SUMOActivityGen defaults.] '
+             '[10 - Run SUMOActivityGen.] '
+             '[11 - Launch SUMO.] '
+             '[12 - Report.] ')
     parser.add_argument(
         '--profiling', dest='profiling', action='store_true',
         help='Enable Python3 cProfile feature.')
@@ -140,6 +143,12 @@ DEFAULT_BUILDINGS_PREFIX = 'buildings/osm_buildings'
 
 ## generateAmitranFromTAZWeights
 DEFAULT_ODMATRIX_AMITRAN_XML = 'osm_odmatrix_amitran.xml'
+
+## taxi stands files
+DEFAULT_TAXI_STANDS_XML = 'osm_taxi_stands.add.xml'
+
+## generateParkingAreaRerouters for taxi stands
+DEFAULT_TAXI_STANDS_REROUTERS_XML = 'osm_taxi_rerouters.add.xml'
 
 ## generateDefaultsActivityGen
 DEAFULT_GENERIC_AG_CONG = 'activitygen.json'
@@ -243,6 +252,25 @@ def _call_generate_amitran_from_taz_weights(density):
                         '--out', DEFAULT_ODMATRIX_AMITRAN_XML,
                         '--density', str(density)]
     generateAmitranFromTAZWeights.main(odmatrix_options)
+
+def _call_generate_taxi_stands_from_osm(filename):
+    """ Call directly generateTaxiStandsFromOSM from SUMOActivityGen. """
+    stands_options = ['--osm', filename,
+                      '--net', DEFAULT_NET_XML,
+                      '--out', DEFAULT_TAXI_STANDS_XML]
+    generateTaxiStandsFromOSM.main(stands_options)
+
+def _call_generate_parking_area_rerouters_for_stands(processes):
+    """ Call directly generateParkingAreaRerouters from sumo/tools. """
+    rerouters_options = ['-a', DEFAULT_TAXI_STANDS_XML,
+                         '-n', DEFAULT_NET_XML,
+                         '--max-number-alternatives', '10',
+                         '--max-distance-alternatives', '5000.0',
+                         '--min-capacity-visibility-true', '50',
+                         '--max-distance-visibility-true', '1000.0',
+                         '--processes', str(processes),
+                         '-o', DEFAULT_TAXI_STANDS_REROUTERS_XML, '--tqdm']
+    generateParkingAreaRerouters.main(rerouters_options)
 
 def _call_generate_defaults_activitygen(population):
     """ Call directly generateDefaultsActivityGen from SUMOActivityGen. """
@@ -366,19 +394,27 @@ def main(cmd_args):
         _call_generate_amitran_from_taz_weights(args.density)
 
     if args.from_step <= 7:
+        logging.info('Generate taxi stands location.')
+        _call_generate_taxi_stands_from_osm(args.osm_file)
+
+    if args.from_step <= 8:
+        logging.info('Generate taxi stands rerouters using tools/generateParkingAreaRerouters.py')
+        _call_generate_parking_area_rerouters_for_stands(args.processes)
+
+    if args.from_step <= 9:
         logging.info('Generate the default values for the activity based mobility generator. ')
         _call_generate_defaults_activitygen(args.population)
 
-    if args.from_step <= 8:
+    if args.from_step <= 10:
         logging.info('Mobility generation using SUMOActivityGen.')
         _call_activitygen()
         _add_rou_to_default_sumocfg()
 
-    if args.from_step <= 9:
+    if args.from_step <= 11:
         logging.info('Launch sumo.')
         _call_sumo()
-    
-    if args.from_step <= 10:
+
+    if args.from_step <= 12:
         logging.info('Report.')
         _call_saga_activity_report()
         _call_plot_summary()
