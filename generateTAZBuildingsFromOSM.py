@@ -68,9 +68,6 @@ def get_options(cmd_args=None):
 
 class GenerateTAZandWeightsFromOSM():
     """ Generate TAZ and Buildings weight from OSM."""
-
-    
-
     def __init__(self, parameters):
         self._param = parameters
         self._osm = _parse_xml_file(self._param.osm_file)
@@ -200,9 +197,17 @@ class GenerateTAZandWeightsFromOSM():
                                     coord = self._osm_boundaries['node'][node['ref']]
                                     list_of_nodes.append((float(coord['lon']), float(coord['lat'])))
 
+                ## --------------------------- Consistency checks ----------------------------------
                 if len(list_of_nodes) <= 2:
                     logging.critical('Boundary %s has %d nodes.', id_boundary, len(list_of_nodes))
                     continue
+                try:
+                    _, _ = geometry.MultiPoint(list_of_nodes).convex_hull.exterior.coords.xy
+                except AttributeError:
+                    logging.critical('Impossible to create the convex hull for boundary %s.',
+                                     id_boundary)
+                    continue
+                # ----------------------------------------------------------------------------------
 
                 name = None
                 ref = None
