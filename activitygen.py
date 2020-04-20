@@ -145,37 +145,19 @@ class ModeShare(Enum):
 class MobilityGenerator():
     """ Generates intermodal mobility for SUMO starting from a synthetic population. """
 
-    _conf = None
-    _profiling = None
-    _max_retry_number = 1000
-
-    _mode_interpr = None
-
-    _random_generator = None
-
-    _sumo_network = None
-    _sumo_parkings = collections.defaultdict(list)
-    _parking_cache = dict()
-    _parking_position = dict()
-    _taz_weights = dict()
-    _buildings_by_taz = dict()
-    _edges_by_taz = dict()
-
-    _blacklisted_edges = set()
-
-    _all_trips = collections.defaultdict(dict)
-
     def __init__(self, conf, profiling=False):
         """
          Initialize the synthetic population.
             :param conf: distionary with the configurations
             :param profiling=False: enable cProfile
         """
+        self._blacklisted_edges = set()
+        self._all_trips = collections.defaultdict(dict)
 
         self._conf = conf
-
         if not conf['intermodalOptions']['modeSelection']:
             raise Exception('The parameter "modeSelection" in "intermodalOptions" must be defined.')
+        self._mode_interpr = None
         if conf['intermodalOptions']['modeSelection'] == 'PROBABILITY':
             self._mode_interpr = ModeShare.PROBABILITY
         elif conf['intermodalOptions']['modeSelection'] == 'WEIGHT':
@@ -184,6 +166,7 @@ class MobilityGenerator():
             raise Exception('The parameter "modeSelection" in "intermodalOptions" must be set to '
                             '"PROBABILITY" or "WEIGHT".')
 
+        self._max_retry_number = 1000
         if 'maxNumTry' in conf:
             self._max_retry_number = conf['maxNumTry']
 
@@ -197,16 +180,30 @@ class MobilityGenerator():
         logging.info('Loading SUMO net file %s', conf['SUMOnetFile'])
         self._sumo_network = sumolib.net.readNet(conf['SUMOnetFile'])
 
-        logging.info('Loading SUMO parking lots from file %s', conf['SUMOadditionals']['parkings'])
+        logging.info('Loading SUMO parking lots from file %s',
+                     conf['SUMOadditionals']['parkings'])
+        self._sumo_parkings = collections.defaultdict(list)
+        self._parking_cache = dict()
+        self._parking_position = dict()
         self._load_parkings(conf['SUMOadditionals']['parkings'])
 
+        logging.info('Loading SUMO taxi stands from file %s',
+                     conf['intermodalOptions']['taxiStands'])
+        self._sumo_taxi_stands = collections.defaultdict(list)
+        self._taxi_stand_cache = dict()
+        self._taxi_stand_position = dict()
+        self._load_taxi_stands(conf['intermodalOptions']['taxiStands'])
+
         logging.info('Loading TAZ weights from %s', conf['population']['tazWeights'])
+        self._taz_weights = dict()
         self._load_weights_from_csv(conf['population']['tazWeights'])
 
         logging.info('Loading buildings weights from %s', conf['population']['buildingsWeight'])
+        self._buildings_by_taz = dict()
         self._load_buildings_weight_from_csv_dir(conf['population']['buildingsWeight'])
 
         logging.info('Loading edges in each TAZ from %s', conf['population']['tazDefinition'])
+        self._edges_by_taz = dict()
         self._load_edges_from_taz(conf['population']['tazDefinition'])
 
         logging.info('Computing the number of entities for each mobility slice..')
@@ -246,6 +243,18 @@ class MobilityGenerator():
                 position = float(child.attrib['startPos']) + 2.5
                 self._sumo_parkings[edge].append(child.attrib['id'])
                 self._parking_position[child.attrib['id']] = position
+
+    def _load_taxi_stands(self, filename):
+        """ Taxi stands ids from XML file. """
+        xml_tree = xml.etree.ElementTree.parse(filename).getroot()
+        for child in xml_tree:
+            if child.tag != 'parkingArea':
+                continue
+            if child.attrib['id'] not in self._conf['intermodalOptions']['taxiStandsBlacklist']:
+                edge = child.attrib['lane'].split('_')[0]
+                position = float(child.attrib['startPos']) + 2.5
+                self._sumo_taxi_stands[edge].append(child.attrib['id'])
+                self._taxi_stand_position[child.attrib['id']] = position
 
     def _load_weights_from_csv(self, filename):
         """ Load the TAZ weight from a CSV file. """
@@ -348,7 +357,7 @@ class MobilityGenerator():
             for _weight, _chain, _modes in m_slice['activityChains']:
                 activity_chains.append((_chain, _modes))
                 activity_chains_weights.append(_weight)
-            activity_index = [i for i in range(len(activity_chains))]
+            activity_index = range(len(activity_chains))
 
             if self._profiling:
                 _pr = cProfile.Profile()
