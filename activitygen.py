@@ -1233,7 +1233,8 @@ class MobilityGenerator():
     def _get_stopping_lane(self, edge, vtype):
         """ Returns the vehicle-friendly stopping lange closer to the sidewalk. """
         for lane in self._sumo_network.getEdge(edge).getLanes():
-            if lane.allows(vtype):
+            sumoVehicleType = 'taxi' if vtype == 'on-demand' else vtype
+            if lane.allows(sumoVehicleType):
                 return lane.getID()
         raise TripGenerationGenericError('"{}" cannot stop on edge {}'.format(vtype, edge))
 
