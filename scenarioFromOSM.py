@@ -93,6 +93,20 @@ def get_options(cmd_args=None):
              '[ 9 - Launch SUMO.] '
              '[10 - Report.] ')
     parser.add_argument(
+        '--to-step', type=int, dest='to_step', default=10,
+        help='For successive iteration of the script, it defines after which step it should stop: '
+             '[ 0 - Copy default files.] '
+             '[ 1 - Run netconvert & polyconvert.] '
+             '[ 2 - Run ptlines2flows.py.] '
+             '[ 3 - Generate parking areas.] '
+             '[ 4 - Generate parking area rerouters.] '
+             '[ 5 - Extract TAZ from administrative boundaries.] '
+             '[ 6 - Generate OD-matrix.] '
+             '[ 7 - Generate SUMOActivityGen defaults.] '
+             '[ 8 - Run SUMOActivityGen.] '
+             '[ 9 - Launch SUMO.] '
+             '[10 - Report.] ')
+    parser.add_argument(
         '--profiling', dest='profiling', action='store_true',
         help='Enable Python3 cProfile feature.')
     parser.add_argument(
@@ -303,7 +317,7 @@ def main(cmd_args):
 
     os.makedirs(args.out_dir, exist_ok=True)
 
-    if args.from_step <= 0:
+    if args.from_step <= 0 and args.to_step >= 0:
         logging.info('Copying default configuration files to destination.')
         shutil.copy(args.osm_file, args.out_dir)
         if args.local_defaults:
@@ -332,53 +346,53 @@ def main(cmd_args):
     args.osm_file = os.path.basename(args.osm_file)
     os.chdir(args.out_dir)
 
-    if args.from_step <= 1:
+    if args.from_step <= 1 and args.to_step >= 1:
         logging.info('Generate the net.xml with all the additional components '
                      '(public transports, parkings, ..)')
         _call_netconvert(args.osm_file, args.left_hand_traffic)
         logging.info('Generate polygons using polyconvert.')
         _call_polyconvert(args.osm_file)
 
-    if args.from_step <= 2:
+    if args.from_step <= 2 and args.to_step >= 2:
         logging.info('Generate flows for public transportation using ptlines2flows.')
         _call_pt_lines_to_flows()
 
-    if args.from_step <= 3:
+    if args.from_step <= 3 and args.to_step >= 3:
         logging.info('Generate parking area location and possibly merge it with the one provided '
                      'by netconvert.')
         _call_generate_parking_areas_from_osm(args.osm_file)
         _merge_parking_files(DEFAULT_SIDE_PARKING_XML, DEFAULT_PARKING_AREAS,
                              DEFAULT_COMPLETE_PARKING_XML)
 
-    if args.from_step <= 4:
+    if args.from_step <= 4 and args.to_step >= 4:
         logging.info('Generate parking area rerouters using tools/generateParkingAreaRerouters.py')
         _call_generate_parking_area_rerouters(args.processes)
 
-    if args.from_step <= 5:
+    if args.from_step <= 5 and args.to_step >= 5:
         logging.info('Generate TAZ from administrative boundaries, TAZ weights using buildings and '
                      'PoIs and the buildings infrastructure.')
         os.makedirs('buildings', exist_ok=True)
         _call_generate_taz_buildings_from_osm(args.osm_file, args.single_taz, args.processes,
                                               args.admin_level, args.html_filename)
 
-    if args.from_step <= 6:
+    if args.from_step <= 6 and args.to_step >= 6:
         logging.info('Generate the default OD-Matrix in Amitran format. ')
         _call_generate_amitran_from_taz_weights(args.density)
 
-    if args.from_step <= 7:
+    if args.from_step <= 7 and args.to_step >= 7:
         logging.info('Generate the default values for the activity based mobility generator. ')
         _call_generate_defaults_activitygen(args.population)
 
-    if args.from_step <= 8:
+    if args.from_step <= 8 and args.to_step >= 8:
         logging.info('Mobility generation using SUMOActivityGen.')
         _call_activitygen()
         _add_rou_to_default_sumocfg()
 
-    if args.from_step <= 9:
+    if args.from_step <= 9 and args.to_step >= 9:
         logging.info('Launch sumo.')
         _call_sumo()
-    
-    if args.from_step <= 10:
+
+    if args.from_step <= 10 and args.to_step >= 10:
         logging.info('Report.')
         _call_saga_activity_report()
         _call_plot_summary()
