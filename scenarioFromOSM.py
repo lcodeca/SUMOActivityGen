@@ -122,6 +122,13 @@ def get_options(cmd_args=None):
         help='Disable Python3 cProfile feature.')
     parser.set_defaults(profiling=False)
     parser.add_argument(
+        '--gui', dest='gui', action='store_true',
+        help='Enable SUMO GUI')
+    parser.add_argument(
+        '--no-gui', dest='gui', action='store_false',
+        help='Disable SUMO GUI')
+    parser.set_defaults(gui=False)
+    parser.add_argument(
         '--local-defaults', dest='local_defaults', action='store_true',
         help='Uses the default folder and files defined locally. If not enabled, uses the files '
         'contained in the sumo/tools/contributed/saga folder.')
@@ -320,9 +327,12 @@ def _add_rou_to_default_sumocfg():
     new_sumocfg = ElementTree.ElementTree(xml_tree)
     new_sumocfg.write(open(DEFAULT_SUMOCFG, 'wb'))
 
-def _call_sumo():
+def _call_sumo(gui=False):
     """ Call SUMO using a subprocess. """
-    subprocess.check_call(['sumo', '-c', DEFAULT_SUMOCFG])
+    if gui:
+        subprocess.check_call(['sumo-gui', '-c', DEFAULT_SUMOCFG, '--start'])
+    else:
+        subprocess.check_call(['sumo', '-c', DEFAULT_SUMOCFG])
 
 def _call_saga_activity_report():
     """ Call directly sagaActivityReport from SUMOActivityGen.. """
@@ -437,7 +447,7 @@ def main(cmd_args):
 
     if args.from_step <= 11 and args.to_step >= 11:
         logging.info('Launch sumo.')
-        _call_sumo()
+        _call_sumo(args.gui)
 
     if args.from_step <= 12 and args.to_step >= 12:
         logging.info('Report.')
