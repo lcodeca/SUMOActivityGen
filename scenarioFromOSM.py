@@ -87,28 +87,30 @@ def get_options(cmd_args=None):
              '[ 2 - Run ptlines2flows.py.] '
              '[ 3 - Generate parking areas.] '
              '[ 4 - Generate parking area rerouters.] '
-             '[ 5 - Extract TAZ from administrative boundaries.] '
-             '[ 6 - Generate OD-matrix.] '
-             '[ 7 - Generate taxi stands.] '
-             '[ 8 - Generate taxi stands rerouters.] '
+             '[ 5 - Generate taxi stands.] '
+             '[ 6 - Generate taxi stands rerouters.] '
+             '[ 7 - Extract TAZ from administrative boundaries.] '
+             '[ 8 - Generate OD-matrix.] '
              '[ 9 - Generate SUMOActivityGen defaults.] '
              '[10 - Run SUMOActivityGen.] '
              '[11 - Launch SUMO.] '
              '[12 - Report.] ')
     parser.add_argument(
-        '--to-step', type=int, dest='to_step', default=10,
+        '--to-step', type=int, dest='to_step', default=12,
         help='For successive iteration of the script, it defines after which step it should stop: '
              '[ 0 - Copy default files.] '
              '[ 1 - Run netconvert & polyconvert.] '
              '[ 2 - Run ptlines2flows.py.] '
              '[ 3 - Generate parking areas.] '
              '[ 4 - Generate parking area rerouters.] '
-             '[ 5 - Extract TAZ from administrative boundaries.] '
-             '[ 6 - Generate OD-matrix.] '
-             '[ 7 - Generate SUMOActivityGen defaults.] '
-             '[ 8 - Run SUMOActivityGen.] '
-             '[ 9 - Launch SUMO.] '
-             '[10 - Report.] ')
+             '[ 5 - Generate taxi stands.] '
+             '[ 6 - Generate taxi stands rerouters.] '
+             '[ 7 - Extract TAZ from administrative boundaries.] '
+             '[ 8 - Generate OD-matrix.] '
+             '[ 9 - Generate SUMOActivityGen defaults.] '
+             '[10 - Run SUMOActivityGen.] '
+             '[11 - Launch SUMO.] '
+             '[12 - Report.] ')
     parser.add_argument(
         '--profiling', dest='profiling', action='store_true',
         help='Enable Python3 cProfile feature.')
@@ -190,6 +192,14 @@ def _call_netconvert(filename, lefthand):
         netconvert_options.append('--lefthand')
     subprocess.check_call(netconvert_options)
 
+def _call_polyconvert(filename):
+    """ Call polyconvert using a subprocess. """
+    polyconvert_options = ['polyconvert',
+                           '--osm', filename,
+                           '--net', DEFAULT_NET_XML,
+                           '-o', DEFAULT_POLY_XML]
+    subprocess.check_call(polyconvert_options)
+
 def _call_pt_lines_to_flows():
     """ Call directly ptlines2flows from sumo/tools. """
     pt_flows_options = ptlines2flows.get_options(['-n', DEFAULT_NET_XML,
@@ -234,13 +244,24 @@ def _call_generate_parking_area_rerouters(processes):
                          '-o', DEFAULT_PARKING_REROUTERS_XML, '--tqdm']
     generateParkingAreaRerouters.main(rerouters_options)
 
-def _call_polyconvert(filename):
-    """ Call polyconvert using a subprocess. """
-    polyconvert_options = ['polyconvert',
-                           '--osm', filename,
-                           '--net', DEFAULT_NET_XML,
-                           '-o', DEFAULT_POLY_XML]
-    subprocess.check_call(polyconvert_options)
+def _call_generate_taxi_stands_from_osm(filename):
+    """ Call directly generateTaxiStandsFromOSM from SUMOActivityGen. """
+    stands_options = ['--osm', filename,
+                      '--net', DEFAULT_NET_XML,
+                      '--out', DEFAULT_TAXI_STANDS_XML]
+    generateTaxiStandsFromOSM.main(stands_options)
+
+def _call_generate_parking_area_rerouters_for_stands(processes):
+    """ Call directly generateParkingAreaRerouters from sumo/tools. """
+    rerouters_options = ['-a', DEFAULT_TAXI_STANDS_XML,
+                         '-n', DEFAULT_NET_XML,
+                         '--max-number-alternatives', '10',
+                         '--max-distance-alternatives', '5000.0',
+                         '--min-capacity-visibility-true', '50',
+                         '--max-distance-visibility-true', '1000.0',
+                         '--processes', str(processes),
+                         '-o', DEFAULT_TAXI_STANDS_REROUTERS_XML, '--tqdm']
+    generateParkingAreaRerouters.main(rerouters_options)
 
 def _call_generate_taz_buildings_from_osm(filename, single_taz, processes, admin_level, plot):
     """ Call directly generateTAZBuildingsFromOSM from SUMOActivityGen. """
@@ -266,25 +287,6 @@ def _call_generate_amitran_from_taz_weights(density):
                         '--out', DEFAULT_ODMATRIX_AMITRAN_XML,
                         '--density', str(density)]
     generateAmitranFromTAZWeights.main(odmatrix_options)
-
-def _call_generate_taxi_stands_from_osm(filename):
-    """ Call directly generateTaxiStandsFromOSM from SUMOActivityGen. """
-    stands_options = ['--osm', filename,
-                      '--net', DEFAULT_NET_XML,
-                      '--out', DEFAULT_TAXI_STANDS_XML]
-    generateTaxiStandsFromOSM.main(stands_options)
-
-def _call_generate_parking_area_rerouters_for_stands(processes):
-    """ Call directly generateParkingAreaRerouters from sumo/tools. """
-    rerouters_options = ['-a', DEFAULT_TAXI_STANDS_XML,
-                         '-n', DEFAULT_NET_XML,
-                         '--max-number-alternatives', '10',
-                         '--max-distance-alternatives', '5000.0',
-                         '--min-capacity-visibility-true', '50',
-                         '--max-distance-visibility-true', '1000.0',
-                         '--processes', str(processes),
-                         '-o', DEFAULT_TAXI_STANDS_REROUTERS_XML, '--tqdm']
-    generateParkingAreaRerouters.main(rerouters_options)
 
 def _call_generate_defaults_activitygen(population):
     """ Call directly generateDefaultsActivityGen from SUMOActivityGen. """
@@ -356,19 +358,24 @@ def main(cmd_args):
             shutil.copy('defaults/osm.sumocfg', args.out_dir)
         else:
             shutil.copy(
-                '{}/contributed/saga/defaults/activitygen.json'.format(os.environ['SUMO_TOOLS']),
+                '{}/contributed/saga/defaults/activitygen.json'.format(
+                    os.path.join(os.environ['SUMO_HOME'], 'tools')),
                 args.out_dir)
             shutil.copy(
-                '{}/contributed/saga/defaults/basic.vType.xml'.format(os.environ['SUMO_TOOLS']),
+                '{}/contributed/saga/defaults/basic.vType.xml'.format(
+                    os.path.join(os.environ['SUMO_HOME'], 'tools')),
                 args.out_dir)
             shutil.copy(
-                '{}/contributed/saga/defaults/duarouter.sumocfg'.format(os.environ['SUMO_TOOLS']),
+                '{}/contributed/saga/defaults/duarouter.sumocfg'.format(
+                    os.path.join(os.environ['SUMO_HOME'], 'tools')),
                 args.out_dir)
             shutil.copy(
-                '{}/contributed/saga/defaults/osm.netccfg'.format(os.environ['SUMO_TOOLS']),
+                '{}/contributed/saga/defaults/osm.netccfg'.format(
+                    os.path.join(os.environ['SUMO_HOME'], 'tools')),
                 args.out_dir)
             shutil.copy(
-                '{}/contributed/saga/defaults/osm.sumocfg'.format(os.environ['SUMO_TOOLS']),
+                '{}/contributed/saga/defaults/osm.sumocfg'.format(
+                    os.path.join(os.environ['SUMO_HOME'], 'tools')),
                 args.out_dir)
 
     args.osm_file = os.path.basename(args.osm_file)
@@ -397,12 +404,12 @@ def main(cmd_args):
         _call_generate_parking_area_rerouters(args.processes)
 
     if args.from_step <= 5 and args.to_step >= 5:
-        logging.info('Generate taxi stands rerouters using tools/generateParkingAreaRerouters.py')
-        _call_generate_parking_area_rerouters_for_stands(args.processes)
+        logging.info('Extract taxi stands from OpenStreetMap.')
+        _call_generate_taxi_stands_from_osm(args.osm_file)
 
     if args.from_step <= 6 and args.to_step >= 6:
-        logging.info('Generate the default values for the activity based mobility generator. ')
-        _call_generate_defaults_activitygen(args.population)
+        logging.info('Generate taxi stands rerouters using tools/generateParkingAreaRerouters.py')
+        _call_generate_parking_area_rerouters_for_stands(args.processes)
 
     if args.from_step <= 7 and args.to_step >= 7:
         logging.info('Generate TAZ from administrative boundaries, TAZ weights using buildings and '
