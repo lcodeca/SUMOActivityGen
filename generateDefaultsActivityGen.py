@@ -35,6 +35,8 @@ def get_options(cmd_args=None):
                         help='Output file.')
     parser.add_argument('--population', type=int, dest='population', default=1000,
                         help='Population: number of entities to generate.')
+    parser.add_argument('--taxi-fleet', type=int, dest='taxi_fleet', default=10,
+                        help='Size of the taxi fleet.')
     return parser.parse_args(cmd_args)
 
 class ActivitygenDefaultGenerator():
@@ -46,6 +48,7 @@ class ActivitygenDefaultGenerator():
         self._config_struct = None
         self._amitran_struct = None
         self._load_configurations()
+        self._set_taxi_fleet()
         self._load_odmatrix()
         self._generate_taz()
         self._generate_slices()
@@ -53,6 +56,10 @@ class ActivitygenDefaultGenerator():
     def _load_configurations(self):
         """ Load JSON configuration file in a dict. """
         self._config_struct = json.loads(open(self._options.conf_file).read())
+
+    def _set_taxi_fleet(self):
+        """ Setup the taxi fleet. """
+        self._config_struct['intermodalOptions']['taxiFleetSize'] = self._options.taxi_fleet
 
     def _load_odmatrix(self):
         """ Load the Amitran XML configuration file."""
