@@ -63,6 +63,9 @@ def get_options(cmd_args=None):
         '--population', type=int, dest='population', default=1000,
         help='Number of people plans to generate.')
     parser.add_argument(
+        '--taxi-fleet', type=int, dest='taxi_fleet', default=10,
+        help='Size of the taxi fleet.')
+    parser.add_argument(
         '--density', type=float, dest='density', default=3000.0,
         help='Average population density in square kilometers.')
     parser.add_argument(
@@ -288,12 +291,13 @@ def _call_generate_amitran_from_taz_weights(density):
                         '--density', str(density)]
     generateAmitranFromTAZWeights.main(odmatrix_options)
 
-def _call_generate_defaults_activitygen(population):
+def _call_generate_defaults_activitygen(population, taxi_fleet):
     """ Call directly generateDefaultsActivityGen from SUMOActivityGen. """
     default_options = ['--conf', DEAFULT_GENERIC_AG_CONG,
                        '--od-amitran', DEFAULT_ODMATRIX_AMITRAN_XML,
                        '--out', DEAFULT_SPECIFIC_AG_CONG,
-                       '--population', str(population)]
+                       '--population', str(population),
+                       '--taxi-fleet', str(taxi_fleet)]
     generateDefaultsActivityGen.main(default_options)
 
 def _call_activitygen():
@@ -424,7 +428,7 @@ def main(cmd_args):
 
     if args.from_step <= 9 and args.to_step >= 9:
         logging.info('Generate the default values for the activity based mobility generator. ')
-        _call_generate_defaults_activitygen(args.population)
+        _call_generate_defaults_activitygen(args.population, args.taxi_fleet)
 
     if args.from_step <= 10 and args.to_step >= 10:
         logging.info('Mobility generation using SUMOActivityGen.')

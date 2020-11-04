@@ -15,7 +15,7 @@
     "intermodalOptions": {
         "parkingAreaBlacklist": [],
         "vehicleAllowedParking": ["passenger", "motorcycle", "evehicle"],
-        "taxiFleetSize": 300,
+        "taxiFleetSize": 0,
         "taxiStands": "osm_taxi_stands.add.xml",
         "taxiStandsBlacklist": [],
         "modeSelection": "PROBABILITY"

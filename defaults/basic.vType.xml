@@ -8,8 +8,12 @@
   </vType>
 
   <vTypeDistribution id="on-demand">
-    <vType vClass="taxi"       id="taxi"  personCapacity="4" latAlignment="center" probability=".50" tau="1.5" speedDev="0.1"/>
-    <vType vClass="passenger"  id="uber"  personCapacity="8" latAlignment="center" probability=".50" tau="1.5" speedDev="0.1"/>
+    <vType vClass="taxi"       id="taxi"  personCapacity="4" latAlignment="center" probability=".50" tau="1.5" speedDev="0.1">
+      <param key="has.taxi.device" value="true"/>
+    </vType>
+    <vType vClass="passenger"  id="uber"  personCapacity="6" latAlignment="center" probability=".50" tau="1.5" speedDev="0.1">
+      <param key="has.taxi.device" value="true"/>
+    </vType>
   </vTypeDistribution>
 
   <!-- Vulnerable Road Users -->
