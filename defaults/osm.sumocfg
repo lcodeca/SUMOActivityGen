@@ -99,4 +99,8 @@
         <seed value="42"/>
     </random_number>
 
+    <gui_only>
+        <gui-settings-file value="default-gui.xml"/>
+    </gui_only>
+
 </configuration>
