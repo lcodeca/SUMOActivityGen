@@ -16,7 +16,7 @@ ACTIVITYGEN=$MOBILITY_GENERATOR/..
 
 if [ ! -d "MoSTScenario" ]
 then
-  git clone https://github.com/lcodeca/MoSTScenario.git
+  git clone --depth 1 https://github.com/lcodeca/MoSTScenario.git
 else
   cd MoSTScenario
   git pull
