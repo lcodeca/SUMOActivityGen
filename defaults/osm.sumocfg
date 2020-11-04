@@ -27,6 +27,7 @@
     <output>
         <output-prefix value='output.'/>
         <summary-output value="summary.xml"/>
+        <person-summary-output value="person.summary.xml"/>
         <tripinfo-output value="tripinfo.xml"/>
         <tripinfo-output.write-unfinished value="false"/>
     </output>
