@@ -35,7 +35,7 @@ if 'SUMO_HOME' in os.environ:
     import traci.constants as tc
     from traci._simulation import Stage
 else:
-    sys.exit("please declare environment variable 'SUMO_HOME'")
+    sys.exit("Please declare environment variable 'SUMO_HOME'")
 
 LAST_STOP_PLACEHOLDER = -42.42
 
@@ -77,7 +77,8 @@ Activity = collections.namedtuple(
     defaults=(None,) * 6)
 
 class TripGenerationGenericError(Exception):
-    """ During the trip generation, various erroroneous states can be reached.
+    """
+    During the trip generation, various erroroneous states can be reached.
     """
     def __init__(self, message=None):
         """ Init the error message. """
@@ -87,7 +88,8 @@ class TripGenerationGenericError(Exception):
             logging.debug(self.message)
 
 class TripGenerationActivityError(TripGenerationGenericError):
-    """ During the generation from the activity chains, various erroroneous states can be reached.
+    """
+    During the generation from the activity chains, various erroroneous states can be reached.
     """
     def __init__(self, message=None, activity=None):
         """ Init the error message. """
@@ -102,7 +104,8 @@ class TripGenerationActivityError(TripGenerationGenericError):
                 openfile.write(pformat(activity) + '\n')
 
 class TripGenerationRouteError(TripGenerationGenericError):
-    """ During the step by step generation of the trip, it is possible to reach a state in which
+    """
+    During the step by step generation of the trip, it is possible to reach a state in which
         some of the chosen locations are impossible to reach.
     """
     def __init__(self, message=None, route=None):
@@ -118,7 +121,8 @@ class TripGenerationRouteError(TripGenerationGenericError):
                 openfile.write(pformat(route) + '\n')
 
 class TripGenerationInconsistencyError(TripGenerationGenericError):
-    """ During the step by step generation of the trip, it is possible to reach a state in which
+    """
+    During the step by step generation of the trip, it is possible to reach a state in which
         some of the chosen modes are impossible to be used in that order.
     """
     def __init__(self, message=None, plan=None):
@@ -134,7 +138,8 @@ class TripGenerationInconsistencyError(TripGenerationGenericError):
                 openfile.write(pformat(plan) + '\n')
 
 class ModeShare(Enum):
-    """ Selector between two interpretation of the values used for the modes:
+    """
+    Selector between two interpretation of the values used for the modes:
         - PROBABILITY: only one mode is selected using the given probability.
         - WEIGHT: all the modes are generated, the cost is multiplied by the given weight and
                     only the cheapest solution is used.
@@ -147,7 +152,7 @@ class MobilityGenerator():
 
     def __init__(self, conf, profiling=False):
         """
-         Initialize the synthetic population.
+        Initialize the synthetic population.
             :param conf: distionary with the configurations
             :param profiling=False: enable cProfile
         """
@@ -175,7 +180,7 @@ class MobilityGenerator():
         self._random_generator = RandomState(seed=self._conf['seed'])
 
         logging.info('Starting TraCI with file %s.', conf['sumocfg'])
-        traci.start(['sumo', '-c', conf['sumocfg']])
+        traci.start(['sumo', '-c', conf['sumocfg']], traceFile='traci.log')
 
         logging.info('Loading SUMO net file %s', conf['SUMOnetFile'])
         self._sumo_network = sumolib.net.readNet(conf['SUMOnetFile'])
@@ -211,6 +216,8 @@ class MobilityGenerator():
 
     def mobility_generation(self):
         """ Generate the mobility for the synthetic population. """
+        logging.info('Generating on-deman fleet..')
+        self._generate_taxi_fleet()
         logging.info('Generating trips for each mobility slice..')
         self._compute_trips_per_slice()
 
@@ -319,6 +326,64 @@ class MobilityGenerator():
     ## ---------------------------------------------------------------------------------------- ##
     ##                                Mobility Generation                                       ##
     ## ---------------------------------------------------------------------------------------- ##
+
+    ## ----                       On-demand fleet generation                               ---- ##
+
+    ON_DEMAND_STR = """
+    <vehicle id="{id}" type="on-demand" depart="0.0">
+        <route edges="{edge}"/>
+        <stop lane="{lane}" startPos="1.0" endPos="-1.0" triggered="person"/>
+    </vehicle>"""
+
+    def _get_random_lane_from_TAZs(self):
+        """
+        Retrieve a random edge usable by a taxi based on the option
+            "intermodalOptions":"taxiFleetInitialTAZs": ['taz', ...]
+        """
+
+        _locations = self._conf['intermodalOptions']['taxiFleetInitialTAZs']
+        _lane = None
+        _retry_counter = 0
+        while not _lane and _retry_counter < self._max_retry_number * 100:
+            try:
+                if _locations:
+                    _taz = self._random_generator.choice(_locations)
+                    _edges = self._edges_by_taz[_taz]
+                    _edge = self._random_generator.choice(_edges)
+                else:
+                    _edge = self._random_generator.choice(self._sumo_network.getEdges()).getID()
+                _lane = self._get_stopping_lane(_edge, 'passenger')
+            except TripGenerationGenericError:
+                _retry_counter += 1
+                _lane = None
+        if _lane is None:
+            logging.critical(
+                '_get_random_lane_from_TAZs with "%s" generated %d errors, '
+                'taxi generation aborted..', pformat(_locations), _retry_counter)
+        return _lane
+
+    def _generate_taxi_fleet(self):
+        """ Generate the number of on-demand vehicles set in the configuration file. """
+        logging.info('On-demand fleet expected size of %d',
+                     self._conf['intermodalOptions']['taxiFleetSize'])
+        _fleet = []
+        for _vehicle_id in tqdm(range(self._conf['intermodalOptions']['taxiFleetSize'])):
+            _name = 'on-demand.{}'.format(_vehicle_id)
+            _lane = self._get_random_lane_from_TAZs()
+            if _lane is None:
+                continue
+            _edge = _lane.split('_')[0]
+            _fleet.append(
+                {
+                    'id': _name,
+                    'depart': 0.0,
+                    'string': self.ON_DEMAND_STR.format(id=_name, edge=_edge, lane=_lane)
+                }
+            )
+        logging.info('Generated an on-demant fleet of %d vehicles.', len(_fleet))
+        self._all_trips['on-demand-fleet'][0] = _fleet
+
+    ## ----                           Person trips generation                               ---- ##
 
     @staticmethod
     def _hash_final_chain(chain):
@@ -529,14 +594,16 @@ class MobilityGenerator():
                     _last_final = _edges[-1]
                 logging.debug('_generate_mode_traci: %s vs %s', _last_final, stage.fromEdge)
                 if _last_final != stage.fromEdge:
-                    logging.warning('_generate_mode_traci generated an inconsistent plan.')
+                    logging.warning('[POST] _generate_mode_traci generated an inconsistent plan.')
+                    logging.warning('Inconsistent plan: %s', pformat(_person_steps))
                     raise TripGenerationInconsistencyError(
                         '_generate_mode_traci generated an inconsistent plan.',
                         _person_steps)
 
             route = None
 
-            ## If the vtype is among the one that require parking, and we are not going home,
+            # TRIP WITH PARKING REQUIREMENTS
+            #  If the vtype is among the one that require parking, and we are not going home,
             #  look for a parking and build the additional walk back and forth.
             if (stage.activity != 'Home' and
                     _vtype in self._conf['intermodalOptions']['vehicleAllowedParking']):
@@ -589,7 +656,9 @@ class MobilityGenerator():
                     for step in route:
                         if _last_final:
                             if step.edges[0] != _last_final:
-                                logging.warning('_generate_mode_traci generated an inconsistent plan.')
+                                logging.warning('[ONGOING] _generate_mode_traci '
+                                                'generated an inconsistent plan.')
+                                logging.warning('Inconsistent plan: \n%s', pformat(route))
                                 raise TripGenerationInconsistencyError(
                                     '_generate_mode_traci generated an inconsistent plan.',
                                     route)
@@ -659,7 +728,7 @@ class MobilityGenerator():
             trip = (best[2], best[1], best[3]) ## _person_stages, _person_steps, mode
         else:
             raise TripGenerationRouteError(
-                'No solution foud for chain {} and modes {}.'.format(activity_chain, 
+                'No solution foud for chain {} and modes {}.'.format(activity_chain,
                                                                      _interpr_modes))
         return trip
 
@@ -773,7 +842,7 @@ class MobilityGenerator():
             ett, route = None, None
             try:
                 route = traci.simulation.findIntermodalRoute(
-                    person_stages[pos].fromEdge, person_stages[pos].toEdge, 
+                    person_stages[pos].fromEdge, person_stages[pos].toEdge,
                     modes=_mode, pType=_ptype, vType=_vtype)
                 ett = self._ett_from_route(route)
             except traci.exceptions.TraCIException:
@@ -1118,14 +1187,11 @@ class MobilityGenerator():
             else:
                 ret = p_edge
             pos += 1
-
         return edges[-1][1], len(edges) - 1
-
 
     ## ---- INTERMODAL: modes and route validity ---- ##
 
-    @staticmethod
-    def _get_mode_parameters(mode):
+    def _get_mode_parameters(self, mode):
         """ Return the correst TraCI parameters for the requested mode.
             Parameters: _mode, _ptype, _vtype
         """
@@ -1135,8 +1201,11 @@ class MobilityGenerator():
             return 'bicycle', '', 'bicycle'
         if mode == 'walk':
             return '', 'pedestrian', ''
-        return 'car', '', mode      # (but car is not always necessary, and it may
-                                    #  creates unusable alternatives)
+        if mode == 'on-demand':
+            return 'taxi', '', 'on-demand'
+        if mode in self._conf['intermodalOptions']['vehicleAllowedParking']:
+            return '', '', mode     # Required to avoid the exchange point outside the parkingStop
+        return 'car', '', mode      # Enables the walk from the exchange points to destination
 
     def _is_valid_route(self, mode, route):
         """ Handle findRoute and findIntermodalRoute results. """
@@ -1250,7 +1319,6 @@ class MobilityGenerator():
         """ Generate the XML string for SUMO route file from a person-trip. """
         complete_trip = ''
         triggered = ''
-        _triggered_counter = 0 ## to be used with on-demand vehicles
         _tr_id = '{}_tr'.format(person['id'])
         _triggered_vtype = ''
         _triggered_route = []
@@ -1277,47 +1345,21 @@ class MobilityGenerator():
                     else:
                         stages += self.WALK.format(edges=' '.join(stage.edges))
             elif stage.type == tc.STAGE_DRIVING:
-                if stage.line != stage.intended:
+                if stage.line != stage.intended: # Public Transports
+                    # !!! vType MISSING !!! line=164:0, intended=pt_bus_164:0.50
                     # intended is the transport id, so it must be different
                     stages += self.RIDE_BUS.format(
                         busStop=stage.destStop, lines=stage.line,
                         intended=stage.intended, depart=stage.depart)
                 else:
+                    # vType=bicycle, line=bicycle, intended=bicycle
+                    # vType=passenger, line=passenger, intended=passenger
+                    # vType=motorcycle, line=motorcycle, intended=motorcycle
+                    # vType=on-demand, line=on-demand, intended=on-demand
                     # triggered vehicle (line = intended)
                     _ride_id = None
                     if stage.intended == 'on-demand':
-                        ## generate a new vehicle
-                        _triggered_counter += 1 ## I don't want to start from 0
-                        _ride_id = '{}_{}_od'.format(person['id'], _triggered_counter)
-                        _route = self.ROUTE.format(edges=' '.join(stage.edges))
-                        _vtype = stage.vType
-                        _stop = ''
-                        start = stage.arrivalPos - self._conf['stopBufferDistance'] / 2.0
-                        end = stage.arrivalPos + self._conf['stopBufferDistance'] / 2.0
-                        # ---- This check should not be necessary in a good scenario ---- #
-                        if start < 0:
-                            logging.warning(
-                                '_generate_sumo_trip_from_activitygen: [%s] start: %f --> 0.0',
-                                _ride_id, start)
-                            start = 0.0
-                        if end > self._sumo_network.getEdge(stage.edges[-1]).getLength():
-                            logging.warning(
-                                '_generate_sumo_trip_from_activitygen: [%s] end: %f --> %f',
-                                _ride_id, end,
-                                self._sumo_network.getEdge(stage.edges[-1]).getLength())
-                            end = self._sumo_network.getEdge(stage.edges[-1]).getLength()
-                        ## ------------------------------------------------------------- ##
-                        _stop = self.ONDEMAND_TRIGGERED.format(
-                            lane=self._get_stopping_lane(stage.edges[-1], _vtype),
-                            start=start, end=end)
-                        if _last_arrival_pos:
-                            triggered += self.VEHICLE_TRIGGERED_DEPART.format(
-                                id=_ride_id, v_type=_vtype, route=_route, stops=_stop,
-                                depart=_last_arrival_pos)
-                        else:
-                            triggered += self.VEHICLE_TRIGGERED.format(
-                                id=_ride_id, v_type=_vtype, route=_route, stops=_stop)
-                        _last_arrival_pos = stage.arrivalPos
+                        _ride_id = 'taxi'
                     else:
                         ## consistency check
                         _internal_consistency_check.append(stage.intended)
