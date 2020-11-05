@@ -15,7 +15,7 @@
     <input>
         <net-file value="osm.net.xml"/>
         <route-files value=""/>
-        <additional-files value="osm_polygons.add.xml,osm_stops.add.xml,osm_complete_parking_areas.add.xml,osm_parking_rerouters.add.xml,osm_taxi_stands.add.xml,osm_taxi_rerouters.add.xml,basic.vType.xml"/>
+        <additional-files value="osm_polygons.add.xml,basic.vType.xml,osm_stops.add.xml,osm_complete_parking_areas.add.xml,osm_parking_rerouters.add.xml,osm_taxi_stands.add.xml,osm_taxi_rerouters.add.xml"/>
     </input>
 
     <time>
@@ -82,14 +82,14 @@
         <!-- The period between successive calls to the dispatcher -->
         <device.taxi.dispatch-period value="60"/>
         <!-- The behavior of idle taxis [stop|randomCircling] -->
-        <device.taxi.idle-algorithm value="randomCircling"/>
+        <device.taxi.idle-algorithm value="stop"/>
         <!-- Write information from the idling algorithm to FILE -->
         <device.taxi.idle-algorithm.output value="taxi.idle.xml"/>
     </taxi_device>
 
     <report>
         <verbose value="true"/>
-        <no-step-log value="true"/>
+        <no-step-log value="false"/>
         <duration-log.statistics value="true"/>
         <duration-log.disable value="false"/>
         <no-warnings value="false"/>

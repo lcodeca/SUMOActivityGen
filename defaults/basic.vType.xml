@@ -10,15 +10,17 @@
   <vTypeDistribution id="on-demand">
     <vType vClass="taxi"       id="taxi"  personCapacity="4" color="yellow" latAlignment="center" probability=".50" tau="1.5" speedDev="0.1">
       <param key="has.taxi.device" value="true"/>
+      <param key="device.taxi.end" value="86400"/>
     </vType>
-    <vType vClass="passenger"  id="uber"  personCapacity="6" color="black" latAlignment="center" probability=".50" tau="1.5" speedDev="0.1">
+    <vType vClass="passenger"  id="uber"  personCapacity="6" color="black"  latAlignment="center" probability=".50" tau="1.5" speedDev="0.1">
       <param key="has.taxi.device" value="true"/>
+      <param key="device.taxi.end" value="86400"/>
     </vType>
   </vTypeDistribution>
 
   <!-- Vulnerable Road Users -->
   <vType vClass="pedestrian"   id="pedestrian"  color="magenta" speedDev="0.1" latAlignment="compact"/>
-  <vType vClass="bicycle"      id="bicycle"     color="cyan" speedDev="0.1" latAlignment="compact"/>
+  <vType vClass="bicycle"      id="bicycle"     color="cyan"    speedDev="0.1" latAlignment="compact"/>
 
   <!-- Normal vehicles -->
   <vType vClass="motorcycle"   id="motorcycle"  color="orange" personCapacity="2" latAlignment="arbitrary" lcPushy="1.0" minGapLat="0.5" tau="1.5" speedDev="0.1"/>

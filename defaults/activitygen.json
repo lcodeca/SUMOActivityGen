@@ -16,9 +16,10 @@
         "parkingAreaBlacklist": [],
         "vehicleAllowedParking": ["passenger", "motorcycle", "evehicle"],
         "taxiFleetSize": 0,
+        "taxiFleetInitialTAZs": [],
         "taxiStands": "osm_taxi_stands.add.xml",
         "taxiStandsBlacklist": [],
-        "modeSelection": "PROBABILITY"
+        "modeSelection": "WEIGHT"
     },
 
     "population": {
