@@ -12,7 +12,7 @@
 import argparse
 import collections
 import cProfile
-import csv
+
 import io
 import json
 import logging
@@ -20,7 +20,6 @@ import os
 from pprint import pformat
 import pstats
 import sys
-import xml.etree.ElementTree
 
 from enum import Enum
 
@@ -28,23 +27,19 @@ import numpy
 from numpy.random import RandomState
 from tqdm import tqdm
 
+from agsrc import activities, environment, sagaexceptions, sumoutils
+
 if 'SUMO_HOME' in os.environ:
     sys.path.append(os.path.join(os.environ['SUMO_HOME'], 'tools'))
-    import sumolib
     import traci
     import traci.constants as tc
     from traci._simulation import Stage
 else:
     sys.exit("Please declare environment variable 'SUMO_HOME'")
 
-LAST_STOP_PLACEHOLDER = -42.42
-
-def logs():
-    """ Log init. """
-    stdout_handler = logging.StreamHandler(sys.stdout)
-    logging.basicConfig(handlers=[stdout_handler], level=logging.INFO,
-                        format='[%(asctime)s] %(levelname)s: %(message)s',
-                        datefmt='%m/%d/%Y %I:%M:%S %p')
+logging.basicConfig(handlers=[logging.StreamHandler(sys.stdout)], level=logging.INFO,
+                    format='[%(asctime)s] %(levelname)s: %(message)s',
+                    datefmt='%m/%d/%Y %I:%M:%S %p')
 
 def get_options(cmd_args):
     """ Argument Parser. """
@@ -63,92 +58,20 @@ def get_options(cmd_args):
     parser.set_defaults(profiling=False)
     return parser.parse_args(cmd_args)
 
-def _load_configurations(filename):
-    """
-    Load JSON configuration file in a dict.
-        :param filename: name of the JSON file containing the configuarions.
-    """
-    return json.loads(open(filename).read())
-
-## Activity
-Activity = collections.namedtuple(
-    'Activity',
-    ['activity', 'fromEdge', 'toEdge', 'arrivalPos', 'start', 'duration'],
-    defaults=(None,) * 6)
-
-class TripGenerationGenericError(Exception):
-    """
-    During the trip generation, various erroroneous states can be reached.
-    """
-    def __init__(self, message=None):
-        """ Init the error message. """
-        super().__init__()
-        self.message = message
-        if self.message:
-            logging.debug(self.message)
-
-class TripGenerationActivityError(TripGenerationGenericError):
-    """
-    During the generation from the activity chains, various erroroneous states can be reached.
-    """
-    def __init__(self, message=None, activity=None):
-        """ Init the error message. """
-        super().__init__()
-        self.message = message
-        self.activity = activity
-        if self.message is not None:
-            logging.debug(self.message)
-        if self.activity is not None:
-            with open('TripGenerationActivityError.log', 'a') as openfile:
-                openfile.write(message + '\n')
-                openfile.write(pformat(activity) + '\n')
-
-class TripGenerationRouteError(TripGenerationGenericError):
-    """
-    During the step by step generation of the trip, it is possible to reach a state in which
-        some of the chosen locations are impossible to reach.
-    """
-    def __init__(self, message=None, route=None):
-        """ Init the error message. """
-        super().__init__()
-        self.message = message
-        self.route = route
-        if self.message is not None:
-            logging.debug(self.message)
-        if self.route is not None:
-            with open('TripGenerationRouteError.log', 'a') as openfile:
-                openfile.write(message + '\n')
-                openfile.write(pformat(route) + '\n')
-
-class TripGenerationInconsistencyError(TripGenerationGenericError):
-    """
-    During the step by step generation of the trip, it is possible to reach a state in which
-        some of the chosen modes are impossible to be used in that order.
-    """
-    def __init__(self, message=None, plan=None):
-        """ Init the error message. """
-        super().__init__()
-        self.message = message
-        self.plan = plan
-        if self.message is not None:
-            logging.debug(self.message)
-        if self.plan is not None:
-            with open('TripGenerationInconsistencyError.log', 'a') as openfile:
-                openfile.write(message + '\n')
-                openfile.write(pformat(plan) + '\n')
-
-class ModeShare(Enum):
-    """
-    Selector between two interpretation of the values used for the modes:
-        - PROBABILITY: only one mode is selected using the given probability.
-        - WEIGHT: all the modes are generated, the cost is multiplied by the given weight and
-                    only the cheapest solution is used.
-    """
-    PROBABILITY = 1
-    WEIGHT = 2
-
 class MobilityGenerator():
     """ Generates intermodal mobility for SUMO starting from a synthetic population. """
+
+    class ModeShare(Enum):
+        """
+        Selector between two interpretation of the values used for the modes:
+            - PROBABILITY: only one mode is selected using the given probability.
+            - WEIGHT: all the modes are generated, the cost is multiplied by the given weight and
+                        only the cheapest solution is used.
+        """
+        PROBABILITY = 1
+        WEIGHT = 2
+
+    LAST_STOP_PLACEHOLDER = -42.42
 
     def __init__(self, conf, profiling=False):
         """
@@ -156,7 +79,7 @@ class MobilityGenerator():
             :param conf: distionary with the configurations
             :param profiling=False: enable cProfile
         """
-        self._blacklisted_edges = set()
+
         self._all_trips = collections.defaultdict(dict)
 
         self._conf = conf
@@ -164,9 +87,9 @@ class MobilityGenerator():
             raise Exception('The parameter "modeSelection" in "intermodalOptions" must be defined.')
         self._mode_interpr = None
         if conf['intermodalOptions']['modeSelection'] == 'PROBABILITY':
-            self._mode_interpr = ModeShare.PROBABILITY
+            self._mode_interpr = self.ModeShare.PROBABILITY
         elif conf['intermodalOptions']['modeSelection'] == 'WEIGHT':
-            self._mode_interpr = ModeShare.WEIGHT
+            self._mode_interpr = self.ModeShare.WEIGHT
         else:
             raise Exception('The parameter "modeSelection" in "intermodalOptions" must be set to '
                             '"PROBABILITY" or "WEIGHT".')
@@ -182,46 +105,27 @@ class MobilityGenerator():
         logging.info('Starting TraCI with file %s.', conf['sumocfg'])
         traci.start(['sumo', '-c', conf['sumocfg']], traceFile='traci.log')
 
-        logging.info('Loading SUMO net file %s', conf['SUMOnetFile'])
-        self._sumo_network = sumolib.net.readNet(conf['SUMOnetFile'])
-
-        logging.info('Loading SUMO parking lots from file %s',
-                     conf['SUMOadditionals']['parkings'])
-        self._sumo_parkings = collections.defaultdict(list)
-        self._parking_cache = dict()
-        self._parking_position = dict()
-        self._load_parkings(conf['SUMOadditionals']['parkings'])
-
-        logging.info('Loading SUMO taxi stands from file %s',
-                     conf['intermodalOptions']['taxiStands'])
-        self._sumo_taxi_stands = collections.defaultdict(list)
-        self._taxi_stand_cache = dict()
-        self._taxi_stand_position = dict()
-        self._load_taxi_stands(conf['intermodalOptions']['taxiStands'])
-
-        logging.info('Loading TAZ weights from %s', conf['population']['tazWeights'])
-        self._taz_weights = dict()
-        self._load_weights_from_csv(conf['population']['tazWeights'])
-
-        logging.info('Loading buildings weights from %s', conf['population']['buildingsWeight'])
-        self._buildings_by_taz = dict()
-        self._load_buildings_weight_from_csv_dir(conf['population']['buildingsWeight'])
-
-        logging.info('Loading edges in each TAZ from %s', conf['population']['tazDefinition'])
-        self._edges_by_taz = dict()
-        self._load_edges_from_taz(conf['population']['tazDefinition'])
+        self._env = environment.Environment(conf, sumo=traci, profiling=profiling)
+        self._chains = activities.Activities(
+            conf, sumo=traci, environment=self._env, profiling=profiling)
 
         logging.info('Computing the number of entities for each mobility slice..')
         self._compute_entities_per_slice()
 
-    def mobility_generation(self):
+    def generate(self):
+        """ Generates and saves the mobility. """
+        self._mobility_generation()
+        self._save_mobility()
+        self._close_traci()
+
+    def _mobility_generation(self):
         """ Generate the mobility for the synthetic population. """
         logging.info('Generating on-deman fleet..')
         self._generate_taxi_fleet()
         logging.info('Generating trips for each mobility slice..')
         self._compute_trips_per_slice()
 
-    def save_mobility(self):
+    def _save_mobility(self):
         """ Save the generated trips to files. """
         logging.info('Saving trips files..')
         if self._conf['mergeRoutesFiles']:
@@ -230,98 +134,10 @@ class MobilityGenerator():
             self._saving_trips_to_files()
 
     @staticmethod
-    def close_traci():
+    def _close_traci():
         """ Artefact to close TraCI properly. """
         logging.debug('Closing TraCI.')
         traci.close()
-
-    ## ---------------------------------------------------------------------------------------- ##
-    ##                                          Loaders                                         ##
-    ## ---------------------------------------------------------------------------------------- ##
-
-    def _load_parkings(self, filename):
-        """ Load parkings ids from XML file. """
-        xml_tree = xml.etree.ElementTree.parse(filename).getroot()
-        for child in xml_tree:
-            if child.tag != 'parkingArea':
-                continue
-            if child.attrib['id'] not in self._conf['intermodalOptions']['parkingAreaBlacklist']:
-                edge = child.attrib['lane'].split('_')[0]
-                position = float(child.attrib['startPos']) + 2.5
-                self._sumo_parkings[edge].append(child.attrib['id'])
-                self._parking_position[child.attrib['id']] = position
-
-    def _load_taxi_stands(self, filename):
-        """ Taxi stands ids from XML file. """
-        xml_tree = xml.etree.ElementTree.parse(filename).getroot()
-        for child in xml_tree:
-            if child.tag != 'parkingArea':
-                continue
-            if child.attrib['id'] not in self._conf['intermodalOptions']['taxiStandsBlacklist']:
-                edge = child.attrib['lane'].split('_')[0]
-                position = float(child.attrib['startPos']) + 2.5
-                self._sumo_taxi_stands[edge].append(child.attrib['id'])
-                self._taxi_stand_position[child.attrib['id']] = position
-
-    def _load_weights_from_csv(self, filename):
-        """ Load the TAZ weight from a CSV file. """
-        with open(filename, 'r') as csvfile:
-            weightreader = csv.reader(csvfile)
-            header = None
-            for row in weightreader:
-                if not row:
-                    continue # empty line
-                if header is None:
-                    header = row
-                elif row: # ignoring empty lines
-                    self._taz_weights[row[0]] = {
-                        header[0]: row[0],
-                        header[1]: row[1],
-                        header[2]: int(row[2]),
-                        header[3]: float(row[3]),
-                        'weight': (int(row[2])/float(row[3])),
-                    }
-
-    def _load_buildings_weight_from_csv_dir(self, directory):
-        """ Load the buildings weight from multiple CSV files. """
-
-        allfiles = [os.path.join(directory, f)
-                    for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
-        for filename in sorted(allfiles):
-            logging.debug('Loding %s', filename)
-            with open(filename, 'r') as csvfile:
-                weightreader = csv.reader(csvfile)
-                header = None
-                taz = None
-                buildings = []
-                for row in weightreader:
-                    if not row:
-                        continue # empty line
-                    if header is None:
-                        header = row
-                    else:
-                        taz = row[0]
-                        buildings.append((float(row[3]),    # weight
-                                          row[4],           # generic edge
-                                          row[5]))          # pedestrian edge
-
-                if len(buildings) < 10:
-                    logging.debug('Dropping %s, only %d buildings found.', filename, len(buildings))
-                    continue
-
-                weighted_buildings = []
-                cum_sum = 0.0
-                for weight, g_edge, p_edge in sorted(buildings):
-                    cum_sum += weight
-                    weighted_buildings.append((cum_sum, g_edge, p_edge, weight))
-                self._buildings_by_taz[taz] = weighted_buildings
-
-    def _load_edges_from_taz(self, filename):
-        """ Load edges from the TAZ file. """
-        xml_tree = xml.etree.ElementTree.parse(filename).getroot()
-        for child in xml_tree:
-            if child.tag == 'taz':
-                self._edges_by_taz[child.attrib['id']] = child.attrib['edges'].split(' ')
 
     ## ---------------------------------------------------------------------------------------- ##
     ##                                Mobility Generation                                       ##
@@ -335,33 +151,6 @@ class MobilityGenerator():
         <stop lane="{lane}" startPos="1.0" endPos="-1.0" triggered="person"/>
     </vehicle>"""
 
-    def _get_random_lane_from_TAZs(self):
-        """
-        Retrieve a random edge usable by a taxi based on the option
-            "intermodalOptions":"taxiFleetInitialTAZs": ['taz', ...]
-        """
-
-        _locations = self._conf['intermodalOptions']['taxiFleetInitialTAZs']
-        _lane = None
-        _retry_counter = 0
-        while not _lane and _retry_counter < self._max_retry_number * 100:
-            try:
-                if _locations:
-                    _taz = self._random_generator.choice(_locations)
-                    _edges = self._edges_by_taz[_taz]
-                    _edge = self._random_generator.choice(_edges)
-                else:
-                    _edge = self._random_generator.choice(self._sumo_network.getEdges()).getID()
-                _lane = self._get_stopping_lane(_edge, 'passenger')
-            except TripGenerationGenericError:
-                _retry_counter += 1
-                _lane = None
-        if _lane is None:
-            logging.critical(
-                '_get_random_lane_from_TAZs with "%s" generated %d errors, '
-                'taxi generation aborted..', pformat(_locations), _retry_counter)
-        return _lane
-
     def _generate_taxi_fleet(self):
         """ Generate the number of on-demand vehicles set in the configuration file. """
         logging.info('On-demand fleet expected size of %d',
@@ -369,7 +158,7 @@ class MobilityGenerator():
         _fleet = []
         for _vehicle_id in tqdm(range(self._conf['intermodalOptions']['taxiFleetSize'])):
             _name = 'on-demand.{}'.format(_vehicle_id)
-            _lane = self._get_random_lane_from_TAZs()
+            _lane = self._env.get_random_lane_from_tazs()
             if _lane is None:
                 continue
             _edge = _lane.split('_')[0]
@@ -384,13 +173,6 @@ class MobilityGenerator():
         self._all_trips['on-demand-fleet'][0] = _fleet
 
     ## ----                           Person trips generation                               ---- ##
-
-    @staticmethod
-    def _hash_final_chain(chain):
-        activities = list()
-        for pos in range(1, len(chain)+1):
-            activities.append(chain[pos].activity)
-        return pformat(activities)
 
     def _compute_entities_per_slice(self):
         """
@@ -452,7 +234,8 @@ class MobilityGenerator():
                         ## Generating departure time
                         _depart = numpy.round(_final_chain[1].start, decimals=2)
                         if _depart < 0.0:
-                            raise TripGenerationGenericError('Negative departure time.')
+                            raise sagaexceptions.TripGenerationGenericError(
+                                'Negative departure time.')
                         if _depart not in self._all_trips[name].keys():
                             self._all_trips[name][_depart] = []
 
@@ -466,8 +249,8 @@ class MobilityGenerator():
                         while _pos >= 0:
                             if  _stages[_pos].type == tc.STAGE_DRIVING:
                                 if not  _stages[_pos].destStop:
-                                    _stages[_pos].travelTime = LAST_STOP_PLACEHOLDER
-                                    _stages[_pos].cost = LAST_STOP_PLACEHOLDER
+                                    _stages[_pos].travelTime = self.LAST_STOP_PLACEHOLDER
+                                    _stages[_pos].cost = self.LAST_STOP_PLACEHOLDER
                                     break
                             _pos -= 1
 
@@ -484,7 +267,7 @@ class MobilityGenerator():
                         _modes_stats[_selected_mode] += 1
                         _chains_stats[self._hash_final_chain(_final_chain)] += 1
 
-                    except TripGenerationGenericError:
+                    except sagaexceptions.TripGenerationGenericError:
                         _person_trip = None
                         _error_counter += 1
 
@@ -518,62 +301,25 @@ class MobilityGenerator():
         for chain, value in _chains_stats.items():
             logging.info('\t %s: %d (%.2f).', chain, value, float(value/total))
 
-    ## ---- PARKING AREAS: location and selection ---- ##
-
-    def _check_parkings_cache(self, edge):
-        """ Check among the previously computed results of _find_closest_parking """
-        if edge in self._parking_cache.keys():
-            return self._parking_cache[edge]
-        return None
-
-    def _find_closest_parking(self, edge):
-        """ Given and edge, find the closest parking area. """
-        distance = sys.float_info.max
-
-        ret = self._check_parkings_cache(edge)
-        if ret:
-            return ret
-
-        p_id = None
-
-        for p_edge, parkings in self._sumo_parkings.items():
-            for parking in parkings:
-                if parking not in self._conf['intermodalOptions']['parkingAreaBlacklist']:
-                    p_id = parking
-                    break
-            if p_id:
-                try:
-                    route = traci.simulation.findIntermodalRoute(
-                        p_edge, edge, pType="pedestrian")
-                except traci.exceptions.TraCIException:
-                    route = None
-                if route and not isinstance(route, list):
-                    # list in until SUMO 1.4.0 included, tuple onward
-                    route = list(route)
-                if route:
-                    cost = self._cost_from_route(route)
-                    if distance > cost:
-                        distance = cost
-                        ret = p_id, p_edge, route
-
-        if ret:
-            self._parking_cache[edge] = ret
-            return ret
-
-        logging.fatal('Edge %s is not reachable from any parking lot.', edge)
-        self._blacklisted_edges.add(edge)
-        return None, None, None
+    @staticmethod
+    def _hash_final_chain(chain):
+        activity_list = list()
+        for pos in range(1, len(chain)+1):
+            activity_list.append(chain[pos].activity)
+        return pformat(activity_list)
 
     ## ---- Functions for _compute_trips_per_slice: _generate_trip, _generate_mode_traci ---- ##
 
     def _generate_mode_traci(self, from_area, to_area, activity_chain, mode):
         """ Return the person trip for a given mode generated with TraCI """
-        _person_stages = self._generate_person_stages(from_area, to_area, activity_chain, mode)
+        _person_stages = self._chains.generate_person_stages(
+            from_area, to_area, activity_chain, mode)
 
         _person_steps = []
         _new_start_time = None
 
-        _mode, _ptype, _vtype = self._get_mode_parameters(mode)
+        _mode, _ptype, _vtype = sumoutils.get_intermodal_mode_parameters(
+            mode, self._conf['intermodalOptions']['vehicleAllowedParking'])
 
         for pos in range(1, len(_person_stages)+1):
             stage = _person_stages[pos]
@@ -596,7 +342,7 @@ class MobilityGenerator():
                 if _last_final != stage.fromEdge:
                     logging.warning('[POST] _generate_mode_traci generated an inconsistent plan.')
                     logging.warning('Inconsistent plan: %s', pformat(_person_steps))
-                    raise TripGenerationInconsistencyError(
+                    raise sagaexceptions.TripGenerationInconsistencyError(
                         '_generate_mode_traci generated an inconsistent plan.',
                         _person_steps)
 
@@ -608,7 +354,7 @@ class MobilityGenerator():
             if (stage.activity != 'Home' and
                     _vtype in self._conf['intermodalOptions']['vehicleAllowedParking']):
                 ## find parking
-                p_id, p_edge, _last_mile = self._find_closest_parking(stage.toEdge)
+                p_id, p_edge, _last_mile = self._env.find_closest_parking(stage.toEdge)
                 if _last_mile:
                     route = traci.simulation.findIntermodalRoute(
                         stage.fromEdge, p_edge, depart=_new_start_time, walkFactor=.9,
@@ -616,10 +362,12 @@ class MobilityGenerator():
                     if route and not isinstance(route, list):
                         # list in until SUMO 1.4.0 included, tuple onward
                         route = list(route)
-                    if (self._is_valid_route(mode, route) and
+                    if (sumoutils.is_valid_route(
+                            mode, route,
+                            self._conf['intermodalOptions']['vehicleAllowedParking']) and
                             route[-1].type == tc.STAGE_DRIVING):
                         route[-1].destStop = p_id
-                        route[-1].arrivalPos = self._parking_position[p_id]
+                        route[-1].arrivalPos = self._env.get_parking_position(p_id)
                         route.extend(_last_mile)
                     else:
                         route = None
@@ -634,7 +382,7 @@ class MobilityGenerator():
                     if route and not isinstance(route, list):
                         # list in until SUMO 1.4.0 included, tuple onward
                         route = list(route)
-                    walk_back[-1].arrivalPos = self._parking_position[p_id]
+                    walk_back[-1].arrivalPos = self._env.get_parking_position(p_id)
                     route.extend(walk_back)
 
                     ## update the next stage to make it start from the parking
@@ -645,7 +393,8 @@ class MobilityGenerator():
                 route = traci.simulation.findIntermodalRoute(
                     stage.fromEdge, stage.toEdge, depart=_new_start_time, walkFactor=.9,
                     modes=_mode, pType=_ptype, vType=_vtype)
-                if not self._is_valid_route(mode, route):
+                if not sumoutils.is_valid_route(
+                    mode, route, self._conf['intermodalOptions']['vehicleAllowedParking']):
                     route = None
                 if route and not isinstance(route, list):
                     # list in until SUMO 1.4.0 included, tuple onward
@@ -659,7 +408,7 @@ class MobilityGenerator():
                                 logging.warning('[ONGOING] _generate_mode_traci '
                                                 'generated an inconsistent plan.')
                                 logging.warning('Inconsistent plan: \n%s', pformat(route))
-                                raise TripGenerationInconsistencyError(
+                                raise sagaexceptions.TripGenerationInconsistencyError(
                                     '_generate_mode_traci generated an inconsistent plan.',
                                     route)
                         _last_final = step.edges[-1]
@@ -672,7 +421,7 @@ class MobilityGenerator():
                         route.append(self._generate_waiting_stage(stage))
 
             if route is None:
-                raise TripGenerationRouteError(
+                raise sagaexceptions.TripGenerationRouteError(
                     'Route not found between {} and {}.'.format(stage.fromEdge, stage.toEdge))
 
             ## Add the stage to the full planned trip.
@@ -689,7 +438,7 @@ class MobilityGenerator():
         solutions = []
 
         _interpr_modes = None
-        if self._mode_interpr == ModeShare.PROBABILITY:
+        if self._mode_interpr == self.ModeShare.PROBABILITY:
             _probs = []
             _vals = []
             for mode, prob in modes:
@@ -707,13 +456,13 @@ class MobilityGenerator():
                 try:
                     _person_steps, _person_stages = self._generate_mode_traci(
                         from_area, to_area, activity_chain, mode)
-                except TripGenerationGenericError:
+                except sagaexceptions.TripGenerationGenericError:
                     _person_steps = None
                     _error_counter += 1
 
             if _person_steps:
                 ## Cost computation.
-                solutions.append((self._cost_from_route(_person_steps) * weight,
+                solutions.append((sumoutils.cost_from_route(_person_steps) * weight,
                                   _person_steps, _person_stages, mode))
             else:
                 logging.critical(
@@ -727,7 +476,7 @@ class MobilityGenerator():
             best = sorted(solutions)[0] ## Ascending.
             trip = (best[2], best[1], best[3]) ## _person_stages, _person_steps, mode
         else:
-            raise TripGenerationRouteError(
+            raise sagaexceptions.TripGenerationRouteError(
                 'No solution foud for chain {} and modes {}.'.format(activity_chain,
                                                                      _interpr_modes))
         return trip
@@ -743,513 +492,8 @@ class MobilityGenerator():
         logging.debug('WAITING Stage: %s', pformat(wait))
         return wait
 
-    def _stages_define_main_locations(self, from_area, to_area, mode):
-        """ Define a generic Home and Primary activity location.
-            The locations must be reachable in some ways.
-        """
-        ## Mode split:
-        _mode, _ptype, _vtype = self._get_mode_parameters(mode)
-
-        route = None
-        from_edge = None
-        to_edge = None
-        _retry_counter = 0
-        while not route and _retry_counter < self._max_retry_number:
-            _retry_counter += 1
-            ## Origin and Destination Selection
-            from_edge, to_edge = self._select_pair(from_area, to_area)
-            from_allowed = (
-                self._sumo_network.getEdge(from_edge).allows('pedestrian') and
-                self._sumo_network.getEdge(from_edge).allows('passenger') and
-                self._sumo_network.getEdge(from_edge).getLength() > self._conf['minEdgeAllowed'])
-            to_allowed = (
-                self._sumo_network.getEdge(to_edge).allows('pedestrian') and
-                self._sumo_network.getEdge(to_edge).allows('passenger') and
-                self._sumo_network.getEdge(to_edge).getLength() > self._conf['minEdgeAllowed'])
-            if self._valid_pair(from_edge, to_edge) and from_allowed and to_allowed:
-                try:
-                    route = traci.simulation.findIntermodalRoute(
-                        from_edge, to_edge, modes=_mode, pType=_ptype, vType=_vtype)
-                    if not self._is_valid_route(mode, route):
-                        route = None
-                        logging.debug(
-                            '_stages_define_main_locations: findIntermodalRoute mode unusable.')
-                except traci.exceptions.TraCIException:
-                    logging.debug('_stages_define_main_locations: findIntermodalRoute FAILED.')
-                    route = None
-            else:
-                logging.debug('_stages_define_main_locations: unusable pair of edges.')
-        if route:
-            return from_edge, to_edge
-        raise TripGenerationActivityError(
-            'Locations for the main activities not found between {} and {} using {}.'.format(
-                from_area, to_area, mode))
-
-    def _stages_define_secondary_locations(self, person_stages, home, primary):
-        """ Define secondary activity locations. """
-        for pos, stage in person_stages.items():
-            if  'S-' in stage.activity:
-                ## look for what is coming before
-                _prec = None
-                _pos = pos - 1
-                while not _prec and _pos in person_stages:
-                    if 'Home' in person_stages[_pos].activity:
-                        _prec = 'H'
-                    elif 'P-' in person_stages[_pos].activity:
-                        _prec = 'P'
-                    _pos -= 1
-
-                ## look for what is coming next
-                _succ = None
-                _pos = pos + 1
-                while not _succ and _pos in person_stages:
-                    if 'Home' in person_stages[_pos].activity:
-                        _succ = 'H'
-                    elif 'P-' in person_stages[_pos].activity:
-                        _succ = 'P'
-                    _pos += 1
-
-                destination = None
-                if _prec == 'H' and _succ == 'H':
-                    destination = self._random_location_circle(center=home, other=primary)
-                elif _prec == 'P' and _succ == 'P':
-                    destination = self._random_location_circle(center=primary, other=home)
-                elif _prec != _succ:
-                    destination = self._random_location_ellipse(home, primary)
-                else:
-                    raise TripGenerationActivityError(
-                        'Invalid sequence in the activity chain: {} --> {}'.format(_prec, _succ),
-                        person_stages)
-
-                person_stages[pos] = stage._replace(toEdge=destination)
-        return person_stages
-
-    def _stages_compute_start_time(self, person_stages, mode):
-        """ Compute the real starting time for the activity chain. """
-
-        ## Mode split:
-        _mode, _ptype, _vtype = self._get_mode_parameters(mode)
-
-        # Find the first 'start' defined.
-        pos = 1
-        while pos in person_stages:
-            if person_stages[pos].start:
-                break
-            pos += 1
-
-        start = person_stages[pos].start
-        while pos in person_stages:
-            ett, route = None, None
-            try:
-                route = traci.simulation.findIntermodalRoute(
-                    person_stages[pos].fromEdge, person_stages[pos].toEdge,
-                    modes=_mode, pType=_ptype, vType=_vtype)
-                ett = self._ett_from_route(route)
-            except traci.exceptions.TraCIException:
-                raise TripGenerationRouteError(
-                    'No solution foud for stage {} and modes {}.'.format(
-                        pformat(person_stages[pos]), mode))
-            if pos-1 in person_stages:
-                if person_stages[pos-1].duration:
-                    ett += person_stages[pos-1].duration
-            start -= ett
-            pos -= 1
-        return start
-
-    def _get_random_pos_from_edge(self, edge):
-        """ Return a random position in the given edge. """
-        length = self._sumo_network.getEdge(edge).getLength()
-        position = None
-        if length < self._conf['stopBufferDistance']:
-            position = length/2.0
-
-        # avoid the proximity of the intersection
-        begin = self._conf['stopBufferDistance'] / 2.0
-        end = length - begin
-        position = (end - begin) * self._random_generator.random_sample() + begin
-        logging.debug('_get_random_pos_from_edge: [%s] %f (%f)', edge, position, length)
-        return position
-
-    def _stages_define_locations_position(self, person_stages):
-        """ Define the position of each location in the activity chain. """
-        home_pos = None
-        primary_pos = None
-
-        for pos, stage in person_stages.items():
-            if 'Home' in stage.activity:
-                if not home_pos:
-                    home_pos = self._get_random_pos_from_edge(stage.toEdge)
-                person_stages[pos] = stage._replace(arrivalPos=home_pos)
-            elif 'P-' in stage.activity:
-                if not primary_pos:
-                    primary_pos = self._get_random_pos_from_edge(stage.toEdge)
-                person_stages[pos] = stage._replace(arrivalPos=primary_pos)
-            else:
-                ## Secondary activities
-                person_stages[pos] = stage._replace(
-                    arrivalPos=self._get_random_pos_from_edge(stage.toEdge))
-
-        return person_stages
-
-    def _generate_person_stages(self, from_area, to_area, activity_chain, mode):
-        """ Returns the trip for the given activity chain. """
-
-        # Define a generic Home and Primary activity location.
-        from_edge, to_edge = self._stages_define_main_locations(from_area, to_area, mode)
-
-        ## Generate preliminary stages for a person
-        person_stages = dict()
-        for pos, activity in enumerate(activity_chain):
-            if activity not in self._conf['activities']:
-                raise Exception('Activity {} is not define in the config file.'.format(activity))
-            _start, _duration = self._get_timing_from_activity(activity)
-            if pos == 0:
-                if activity != 'Home':
-                    raise Exception("Every activity chain MUST start with 'Home',"
-                                    " '{}' given.".format(activity))
-                ## Beginning
-                person_stages[pos] = Activity(
-                    activity=activity, fromEdge=from_edge, start=_start, duration=_duration)
-            elif 'P-' in activity:
-                ## This is a primary activity
-                person_stages[pos] = Activity(
-                    activity=activity, toEdge=to_edge, start=_start, duration=_duration)
-            elif 'S-' in activity:
-                ## This is a secondary activity
-                person_stages[pos] = Activity(
-                    activity=activity, start=_start, duration=_duration)
-            elif activity == 'Home':
-                ## End of the activity chain.
-                person_stages[pos] = Activity(
-                    activity=activity, toEdge=from_edge, start=_start, duration=_duration)
-
-        if len(person_stages) <= 2:
-            raise Exception("Invalid activity chain. (Minimal: H -> P-? -> H", activity_chain)
-
-        ## Define secondary activity location
-        person_stages = self._stages_define_secondary_locations(person_stages, from_edge, to_edge)
-
-        ## Remove the initial 'Home' stage and update the from of the second stage.
-        person_stages[1] = person_stages[1]._replace(fromEdge=person_stages[0].fromEdge)
-        if person_stages[0].start:
-            person_stages[1] = person_stages[1]._replace(start=person_stages[0].stage)
-        del person_stages[0]
-
-        ## Fixing the 'from' field with a forward chain
-        pos = 2
-        while pos in person_stages:
-            person_stages[pos] = person_stages[pos]._replace(fromEdge=person_stages[pos-1].toEdge)
-            pos += 1
-
-        ## Compute the real starting time for the activity chain based on ETT and durations
-        start = self._stages_compute_start_time(person_stages, mode)
-        person_stages[1] = person_stages[1]._replace(start=start)
-
-        ## Define the position of each location in the activity chain.
-        person_stages = self._stages_define_locations_position(person_stages)
-
-        ## Final location consistency test
-        last_edge = person_stages[1].toEdge
-        pos = 2
-        while pos in person_stages:
-            if person_stages[pos].fromEdge != last_edge:
-                raise TripGenerationActivityError(
-                    'Inconsistency in the locations for the chain of activities.',
-                    person_stages)
-            last_edge = person_stages[pos].toEdge
-            pos += 1
-
-        return person_stages
-
-    def _random_location_circle(self, center, other):
-        """ Return a random edge in within a radius (*) from the given center.
-
-            (*) Uses the ellipses defined by the foci center and other,
-                and the major axe of 1.30 * distance between the foci.
-        """
-        length = None
-        try:
-            length = traci.simulation.findRoute(center, other).length
-        except traci.exceptions.TraCIException:
-            raise TripGenerationActivityError('No route between {} and {}'.format(center, other))
-        major_axe = length * 1.3
-        minor_axe = numpy.sqrt(numpy.square(major_axe) - numpy.square(length))
-        radius = minor_axe / 2.0
-
-        logging.debug('_random_location_circle: %s [%.2f]', center, radius)
-        edges = self._get_all_neigh_edges(center, radius)
-        if not edges:
-            raise TripGenerationActivityError(
-                'No edges from {} with range {}.'.format(center, length))
-
-        ret = self._random_generator.choice(edges)
-        edges.remove(ret)
-        allowed = (
-            self._sumo_network.getEdge(ret).allows('pedestrian') and
-            self._sumo_network.getEdge(ret).allows('passenger') and
-            ret != center and ret != other and
-            self._sumo_network.getEdge(ret).getLength() > self._conf['minEdgeAllowed'])
-        while edges and not allowed:
-            ret = self._random_generator.choice(edges)
-            edges.remove(ret)
-            allowed = (
-                self._sumo_network.getEdge(ret).allows('pedestrian') and
-                self._sumo_network.getEdge(ret).allows('passenger') and
-                ret != center and ret != other and
-                self._sumo_network.getEdge(ret).getLength() > self._conf['minEdgeAllowed'])
-
-        if not edges:
-            raise TripGenerationActivityError(
-                'No valid edges from {} with range {}.'.format(center, length))
-        return ret
-
-    def _random_location_ellipse(self, focus1, focus2):
-        """ Return a random edge in within the ellipse defined by the foci,
-            and the major axe of 1.30 * distance between the foci.
-        """
-        length = None
-        try:
-            length = traci.simulation.findRoute(focus1, focus2).length
-            logging.debug('_random_location_ellipse: %s --> %s [%.2f]', focus1, focus2, length)
-        except traci.exceptions.TraCIException:
-            raise TripGenerationActivityError('No route between {} and {}'.format(focus1, focus2))
-
-        major_axe = length * 1.3
-
-        edges = self._get_all_neigh_edges(focus1, length)
-        while edges:
-            edge = self._random_generator.choice(edges)
-            edges.remove(edge)
-            if edge in (focus1, focus2):
-                continue
-            allowed = (
-                self._sumo_network.getEdge(edge).allows('pedestrian') and
-                self._sumo_network.getEdge(edge).allows('passenger') and
-                self._sumo_network.getEdge(edge).getLength() > self._conf['minEdgeAllowed'])
-            if not allowed:
-                continue
-            try:
-                first = traci.simulation.findRoute(focus1, edge).length
-                second = traci.simulation.findRoute(edge, focus2).length
-                if first + second <= major_axe:
-                    logging.debug('_random_location_ellipse: %s --> %s [%.2f]', focus1, edge, first)
-                    logging.debug(
-                        '_random_location_ellipse: %s --> %s [%.2f]', edge, focus2, second)
-                    return edge
-            except traci.exceptions.TraCIException:
-                pass
-
-        raise TripGenerationActivityError(
-            "No location available for _random_location_ellipse [{}, {}]".format(focus1, focus2))
-
-    def _get_all_neigh_edges(self, origin, distance):
-        """ Returns all the edges reachable from the origin within the given radius. """
-        _edge_shape = self._sumo_network.getEdge(origin).getShape()
-        x_coord = _edge_shape[-1][0]
-        y_coord = _edge_shape[-1][1]
-        edges = self._sumo_network.getNeighboringEdges(x_coord, y_coord, r=distance)
-        edges = [edge.getID() for edge, _ in edges]
-        return edges
-
-    def _get_timing_from_activity(self, activity):
-        """ Compute start and duration from the activity defined in the config file. """
-        start = None
-        if self._conf['activities'][activity]['start']:
-            start = self._random_generator.normal(
-                loc=self._conf['activities'][activity]['start']['m'],
-                scale=self._conf['activities'][activity]['start']['s'])
-            if start < 0:
-                return self._get_timing_from_activity(activity)
-        duration = None
-        if self._conf['activities'][activity]['duration']:
-            duration = self._random_generator.normal(
-                loc=self._conf['activities'][activity]['duration']['m'],
-                scale=self._conf['activities'][activity]['duration']['s'])
-            if duration <= 0:
-                return self._get_timing_from_activity(activity)
-        return start, duration
-
-    ## ---- PAIR SELECTION: origin - destination - mode ---- ##
-
-    def _select_pair(self, from_area, to_area, pedestrian=False):
-        """ Randomly select one pair, chosing between buildings and TAZ. """
-        from_taz = str(self._select_taz_from_weighted_area(from_area))
-        to_taz = str(self._select_taz_from_weighted_area(to_area))
-
-        if from_taz in self._buildings_by_taz.keys() and to_taz in self._buildings_by_taz.keys():
-            return self._select_pair_from_taz_wbuildings(
-                self._buildings_by_taz[from_taz][:], self._buildings_by_taz[to_taz][:], pedestrian)
-        return self._select_pair_from_taz(
-            self._edges_by_taz[from_taz][:], self._edges_by_taz[to_taz][:])
-
-    def _select_taz_from_weighted_area(self, area):
-        """ Select a TAZ from an area using its weight. """
-        selection = self._random_generator.uniform(0, 1)
-        total_weight = sum([self._taz_weights[taz]['weight'] for taz in area])
-        if total_weight <= 0:
-            error_msg = 'Error with area {}, total sum of weights is {}. '.format(
-                area, total_weight)
-            error_msg += 'It must be strictly positive.'
-            raise Exception(error_msg, [(taz, self._taz_weights[taz]['weight']) for taz in area])
-        cumulative = 0.0
-        for taz in area:
-            cumulative += self._taz_weights[taz]['weight'] / total_weight
-            if selection <= cumulative:
-                return taz
-        return None # this is matematically impossible,
-                    # if this happens, there is a mistake in the weights.
-
-    def _valid_pair(self, from_edge, to_edge):
-        """ This is just to avoid a HUGE while condition.
-            sumolib.net.edge.is_fringe()
-        """
-        from_edge_sumo = self._sumo_network.getEdge(from_edge)
-        to_edge_sumo = self._sumo_network.getEdge(to_edge)
-
-        if from_edge_sumo.is_fringe(from_edge_sumo.getOutgoing()):
-            return False
-        if to_edge_sumo.is_fringe(to_edge_sumo.getIncoming()):
-            return False
-        if from_edge == to_edge:
-            return False
-        if to_edge in self._blacklisted_edges:
-            return False
-        if not to_edge_sumo.allows('pedestrian'):
-            return False
-        return True
-
-    def _select_pair_from_taz(self, from_taz, to_taz):
-        """ Randomly select one pair from a TAZ.
-            Important: from_taz and to_taz MUST be passed by copy.
-            Note: sumonet.getEdge(from_edge).allows(v_type) does not support distributions.
-        """
-
-        from_edge = from_taz.pop(
-            self._random_generator.randint(0, len(from_taz)))
-        to_edge = to_taz.pop(
-            self._random_generator.randint(0, len(to_taz)))
-
-        _to = False
-        while not self._valid_pair(from_edge, to_edge) and from_taz and to_taz:
-            if not self._sumo_network.getEdge(to_edge).allows('pedestrian') or _to:
-                to_edge = to_taz.pop(
-                    self._random_generator.randint(0, len(to_taz)))
-                _to = False
-            else:
-                from_edge = from_taz.pop(
-                    self._random_generator.randint(0, len(from_taz)))
-                _to = True
-
-        return from_edge, to_edge
-
-    def _select_pair_from_taz_wbuildings(self, from_buildings, to_buildings, pedestrian):
-        """ Randomly select one pair from a TAZ.
-            Important: from_buildings and to_buildings MUST be passed by copy.
-            Note: sumonet.getEdge(from_edge).allows(v_type) does not support distributions.
-        """
-
-        from_edge, _index = self._get_weighted_edge(
-            from_buildings, self._random_generator.random_sample(), False)
-        del from_buildings[_index]
-        to_edge, _index = self._get_weighted_edge(
-            to_buildings, self._random_generator.random_sample(), pedestrian)
-        del to_buildings[_index]
-
-        _to = True
-        while not self._valid_pair(from_edge, to_edge) and from_buildings and to_buildings:
-            if not self._sumo_network.getEdge(to_edge).allows('pedestrian') or _to:
-                to_edge, _index = self._get_weighted_edge(
-                    to_buildings, self._random_generator.random_sample(), pedestrian)
-                del to_buildings[_index]
-                _to = False
-            else:
-                from_edge, _index = self._get_weighted_edge(
-                    from_buildings, self._random_generator.random_sample(), False)
-                del from_buildings[_index]
-                _to = True
-
-        return from_edge, to_edge
-
-    @staticmethod
-    def _get_weighted_edge(edges, double, pedestrian):
-        """ Return an edge and its position using the cumulative sum of the weigths in the area. """
-        pos = -1
-        ret = None
-        for cum_sum, g_edge, p_edge, _ in edges:
-            if ret and cum_sum > double:
-                return ret, pos
-            if pedestrian and p_edge:
-                ret = p_edge
-            elif not pedestrian and g_edge:
-                ret = g_edge
-            elif g_edge:
-                ret = g_edge
-            else:
-                ret = p_edge
-            pos += 1
-        return edges[-1][1], len(edges) - 1
-
-    ## ---- INTERMODAL: modes and route validity ---- ##
-
-    def _get_mode_parameters(self, mode):
-        """ Return the correst TraCI parameters for the requested mode.
-            Parameters: _mode, _ptype, _vtype
-        """
-        if mode == 'public':
-            return 'public', '', ''
-        if mode == 'bicycle':
-            return 'bicycle', '', 'bicycle'
-        if mode == 'walk':
-            return '', 'pedestrian', ''
-        if mode == 'on-demand':
-            return 'taxi', '', 'on-demand'
-        if mode in self._conf['intermodalOptions']['vehicleAllowedParking']:
-            return '', '', mode     # Required to avoid the exchange point outside the parkingStop
-        return 'car', '', mode      # Enables the walk from the exchange points to destination
-
-    def _is_valid_route(self, mode, route):
-        """ Handle findRoute and findIntermodalRoute results. """
-        if route is None:
-            # traci failed
-            return False
-        _mode, _ptype, _vtype = self._get_mode_parameters(mode)
-        if not isinstance(route, (list, tuple)):
-            # list in until SUMO 1.4.0 included, tuple onward
-            # only for findRoute
-            if len(route.edges) >= 2:
-                return True
-        elif _mode == 'public':
-            for stage in route:
-                if stage.line:
-                    return True
-        elif _mode in ('car', 'bicycle'):
-            for stage in route:
-                if stage.type == tc.STAGE_DRIVING and len(stage.edges) >= 2:
-                    return True
-        else:
-            for stage in route:
-                if len(stage.edges) >= 2:
-                    return True
-        return False
-
-    @staticmethod
-    def _cost_from_route(route):
-        """ Compute the route cost. """
-        cost = 0.0
-        for stage in route:
-            cost += stage.cost
-        return cost
-
-    @staticmethod
-    def _ett_from_route(route):
-        """ Compute the route etimated travel time. """
-        ett = 0.0
-        for stage in route:
-            ett += stage.travelTime
-        return ett
-
     ## ---------------------------------------------------------------------------------------- ##
-    ##                                Saving trips to files                                     ##
+    ##                                       TraCI to XML                                       ##
     ## ---------------------------------------------------------------------------------------- ##
 
     ROUTES_TPL = """<?xml version="1.0" encoding="UTF-8"?>
@@ -1308,13 +552,6 @@ class MobilityGenerator():
     <vehicle id="{id}" type="{v_type}" depart="triggered" departPos="{depart}">{route}{stops}
     </vehicle>"""
 
-    def _get_stopping_lane(self, edge, vtype):
-        """ Returns the vehicle-friendly stopping lange closer to the sidewalk. """
-        for lane in self._sumo_network.getEdge(edge).getLanes():
-            if lane.allows(vtype):
-                return lane.getID()
-        raise TripGenerationGenericError('"{}" cannot stop on edge {}'.format(vtype, edge))
-
     def _generate_sumo_trip_from_activitygen(self, person):
         """ Generate the XML string for SUMO route file from a person-trip. """
         complete_trip = ''
@@ -1369,7 +606,7 @@ class MobilityGenerator():
                             ## check for contiguity
                             if _triggered_route[-1] != stage.edges[0]:
                                 logging.warning('Triggered vehicle has a broken route.')
-                                raise TripGenerationInconsistencyError(
+                                raise sagaexceptions.TripGenerationInconsistencyError(
                                     'Triggered vehicle has a broken route.',
                                     pformat(person['stages']))
                             ## remove the duplicated edge
@@ -1380,10 +617,10 @@ class MobilityGenerator():
                         _triggered_vtype = stage.vType
                         _stop = ''
                         # print(stage.travelTime, stage.destStop)
-                        if stage.travelTime == LAST_STOP_PLACEHOLDER:
+                        if stage.travelTime == self.LAST_STOP_PLACEHOLDER:
                             # print('final stop')
                             _stop = self.FINAL_STOP.format(
-                                lane=self._get_stopping_lane(stage.edges[-1], _triggered_vtype))
+                                lane=self._env.get_stopping_lane(stage.edges[-1], _triggered_vtype))
                         else:
                             if stage.destStop:
                                 # print('parking')
@@ -1394,7 +631,8 @@ class MobilityGenerator():
                                 start = stage.arrivalPos - self._conf['stopBufferDistance'] / 2.0
                                 end = stage.arrivalPos + self._conf['stopBufferDistance'] / 2.0
                                 _stop = self.STOP_EDGE_TRIGGERED.format(
-                                    lane=self._get_stopping_lane(stage.edges[-1], _triggered_vtype),
+                                    lane=self._env.get_stopping_lane(
+                                        stage.edges[-1], _triggered_vtype),
                                     person=person['id'], start=start, end=end)
                         _triggered_stops += _stop
 
@@ -1413,20 +651,20 @@ class MobilityGenerator():
         if _internal_consistency_check:
             if person['stages'][0].type != tc.STAGE_DRIVING:
                 logging.warning('Triggered vehicle does not start from the beginning.')
-                raise TripGenerationInconsistencyError(
+                raise sagaexceptions.TripGenerationInconsistencyError(
                     'Triggered vehicle does not start from the beginning.',
                     pformat(person['stages']))
             if person['stages'][-2].type != tc.STAGE_DRIVING:
                 ## person['stages'][-1] is the stop
                 logging.warning('Triggered vehicle does not finish at the end.')
-                raise TripGenerationInconsistencyError(
+                raise sagaexceptions.TripGenerationInconsistencyError(
                     'Triggered vehicle does not finish at the end.',
                     pformat(person['stages']))
 
         ## waiting stages consistency test
         if not _waiting_stages:
             logging.warning('Person plan does not have any waiting stages.')
-            raise TripGenerationInconsistencyError(
+            raise sagaexceptions.TripGenerationInconsistencyError(
                 'Person plan does not have any waiting stages.',
                 pformat(person['stages']))
 
@@ -1437,6 +675,10 @@ class MobilityGenerator():
 
         logging.debug('Complete trip: \n%s', complete_trip)
         return complete_trip
+
+    ## ---------------------------------------------------------------------------------------- ##
+    ##                                Saving trips to files                                     ##
+    ## ---------------------------------------------------------------------------------------- ##
 
     def _saving_trips_to_files(self):
         """ Saving all the trips to files divided by slice. """
@@ -1482,12 +724,9 @@ def main(cmd_args):
     ## ========================              PROFILER              ======================== ##
 
     logging.info('Loading configuration file %s.', args.config)
-    conf = _load_configurations(args.config)
+    conf = json.loads(open(args.config).read())
 
-    mobility = MobilityGenerator(conf, profiling=args.profiling)
-    mobility.mobility_generation()
-    mobility.save_mobility()
-    mobility.close_traci()
+    MobilityGenerator(conf, profiling=args.profiling).generate()
 
     ## ========================              PROFILER              ======================== ##
     if args.profiling:
@@ -1500,5 +739,4 @@ def main(cmd_args):
     logging.info('Done.')
 
 if __name__ == "__main__":
-    logs()
     main(sys.argv[1:])
