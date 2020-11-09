@@ -33,10 +33,10 @@ def get_options(cmd_args=None):
         prog='{}'.format(sys.argv[0]), usage='%(prog)s [options]',
         description='SAGA Live Monitoring')
     parser.add_argument(
-        '--tripinfo', type=str, required=True, 
+        '--tripinfo', type=str, required=True,
         help='SUMO TripInfo file (XML).')
     parser.add_argument(
-        '--out', type=str, required=True, 
+        '--out', type=str, required=True,
         help='Output file (CSV).')
     return parser.parse_args(cmd_args)
 
@@ -54,7 +54,8 @@ class SAGAReport(object):
 
         self.activity_stats = collections.defaultdict(list)
 
-    def loadTripinfo(self):
+    def load_tripinfo(self):
+        """ Load the Tripinfo file """
         # just in case..
         self.tripinfo = collections.defaultdict(dict)
         self.personinfo = collections.defaultdict(dict)
@@ -66,7 +67,7 @@ class SAGAReport(object):
             parser = etree.XMLParser(schema=schema)
             tree = etree.parse(self.tripinfo_file, parser)
         except etree.XMLSyntaxError as excp:
-            logging.warning('Unable to use %s schema due to exception %s.', 
+            logging.warning('Unable to use %s schema due to exception %s.',
                             self.TRIPINFO_SCHEMA, pformat(excp))
             tree = etree.parse(self.tripinfo_file)
 
@@ -85,7 +86,8 @@ class SAGAReport(object):
         logging.debug('TRIPINFO: \n%s', pformat(self.tripinfo))
         logging.debug('PERSONINFO: \n%s', pformat(self.personinfo))
 
-    def processTripinfo(self):
+    def process_tripinfo(self):
+        """ Process the Tripinfo file """
         logging.info('Processing %s tripinfo file.', self.tripinfo_file)
         for person, data in self.personinfo.items():
             for tag, stage in data['stages']:
@@ -96,7 +98,8 @@ class SAGAReport(object):
                         'duration': stage['duration'],
                     })
 
-    def computeStats(self):
+    def compute_stats(self):
+        """ Computing Stats from the Tripinfo file """
         logging.info('Computing statistics..')
         stats = dict()
         for activity, data in self.activity_stats.items():
@@ -134,9 +137,9 @@ def main(cmd_args):
     logging.debug('%s', args)
 
     report = SAGAReport(args)
-    report.loadTripinfo()
-    report.processTripinfo()
-    report.computeStats()
+    report.load_tripinfo()
+    report.process_tripinfo()
+    report.compute_stats()
     logging.info('Done.')
 
 if __name__ == '__main__':
