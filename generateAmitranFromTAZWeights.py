@@ -48,7 +48,7 @@ class AmitranFromTAZWeightsGenerator():
         """ Load the TAZ weight from a CSV file. """
         with open(self._options.taz_file, 'r') as csvfile:
             weightreader = csv.reader(csvfile)
-            header = None
+            header = []
             for row in weightreader:
                 if not header:
                     header = row

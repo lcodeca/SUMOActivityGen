@@ -15,11 +15,15 @@
     "intermodalOptions": {
         "parkingAreaBlacklist": [],
         "vehicleAllowedParking": ["passenger", "ptw", "evehicle"],
+        "taxiFleetSize": 1000,
+        "taxiFleetInitialTAZs": ["1", "11", "12", "13", "14", "15", "16"],
+        "taxiStands": "",
+        "taxiStandsBlacklist": [],
         "modeSelection": "PROBABILITY"
     },
 
     "population": {
-        "entities" : 20000,
+        "entities" : 10000,
         "tazDefinition": "MoSTScenario/tools/out/taz/most.complete.taz.xml",
         "tazWeights": "MoSTScenario/tools/out/taz/most.complete.taz.weight.csv",
         "buildingsWeight": "MoSTScenario/tools/out/taz/buildings/"

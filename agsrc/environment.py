@@ -87,6 +87,8 @@ class Environment():
 
     def _load_parkings(self, filename):
         """ Load parkings ids from XML file. """
+        if not os.path.isfile(filename):
+            return
         xml_tree = xml.etree.ElementTree.parse(filename).getroot()
         for child in xml_tree:
             if child.tag != 'parkingArea':
@@ -99,6 +101,8 @@ class Environment():
 
     def _load_taxi_stands(self, filename):
         """ Taxi stands ids from XML file. """
+        if not os.path.isfile(filename):
+            return
         xml_tree = xml.etree.ElementTree.parse(filename).getroot()
         for child in xml_tree:
             if child.tag != 'parkingArea':
