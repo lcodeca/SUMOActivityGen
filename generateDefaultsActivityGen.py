@@ -10,17 +10,9 @@
 """
 
 import argparse
-import logging
 import json
 import sys
 import xml.etree.ElementTree
-
-def logs():
-    """ Log init. """
-    stdout_handler = logging.StreamHandler(sys.stdout)
-    logging.basicConfig(handlers=[stdout_handler], level=logging.INFO,
-                        format='[%(asctime)s] %(levelname)s: %(message)s',
-                        datefmt='%m/%d/%Y %I:%M:%S %p')
 
 def get_options(cmd_args=None):
     """ Argument Parser """
@@ -106,10 +98,10 @@ class ActivitygenDefaultGenerator():
 
     def save_configuration_file(self, filename):
         """ Save the configuration file. """
-        logging.info("Creation of %s", filename)
+        print("Creation of {}".format(filename))
         with open(filename, 'w') as outfile:
             outfile.write(json.dumps(self._config_struct, indent=4))
-        logging.info("%s created.", filename)
+        print("{} created.".format(filename))
 
 def main(cmd_args):
     """ Generate the default values for SUMOActivityGen. """
@@ -118,8 +110,7 @@ def main(cmd_args):
     defaults = ActivitygenDefaultGenerator(options)
     defaults.save_configuration_file(options.output)
 
-    logging.info('Done.')
+    print('Done.')
 
 if __name__ == "__main__":
-    logs()
     main(sys.argv[1:])
