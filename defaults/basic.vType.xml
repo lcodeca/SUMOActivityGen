@@ -1,18 +1,21 @@
 <routes>
   <!-- Public Transports -->
-  <vType vClass="bus"  id="bus"   personCapacity="50" color="blue" latAlignment="center" tau="1.5" speedDev="0.1" lcCooperative="0.0">
+  <vType vClass="bus"  id="bus"         personCapacity="50" color="blue" latAlignment="center" tau="1.5" speedDev="0.1" lcCooperative="0.0">
     <param key="has.rerouting.device" value="false"/>
   </vType>
-  <vType vClass="rail" id="train" personCapacity="500" color="blue">
+    <vType vClass="rail_urban" id="metro" personCapacity="100" color="blue">
+    <param key="has.rerouting.device" value="true"/>
+  </vType>
+  <vType vClass="rail" id="train"       personCapacity="500" color="blue">
     <param key="has.rerouting.device" value="false"/>
   </vType>
 
   <vTypeDistribution id="on-demand">
-    <vType vClass="taxi"       id="taxi"  personCapacity="4" color="yellow" latAlignment="center" probability=".50" tau="1.5" speedDev="0.1">
+    <vType vClass="taxi"  id="taxi"  personCapacity="4" color="yellow" latAlignment="center" probability=".50" tau="1.5" speedDev="0.1">
       <param key="has.taxi.device" value="true"/>
       <param key="device.taxi.end" value="86400"/>
     </vType>
-    <vType vClass="passenger"  id="uber"  personCapacity="6" color="black"  latAlignment="center" probability=".50" tau="1.5" speedDev="0.1">
+    <vType vClass="taxi"  id="uber"  personCapacity="6" color="black"  latAlignment="center" probability=".50" tau="1.5" speedDev="0.1">
       <param key="has.taxi.device" value="true"/>
       <param key="device.taxi.end" value="86400"/>
     </vType>
