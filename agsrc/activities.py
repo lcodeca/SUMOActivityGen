@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
-""" SUMO Activity-Based Mobility Generator - Activity Chains
+""" SUMO Activity-Based Mobility Generator - Activity console_handlerains
 
     Author: Lara CODECA
 
     This program and the accompanying materials are made available under the
-    terms of the Eclipse Public License 2.0 which is available at
+    terms of the Eclipse Public License 2.0 whiconsole_handler is available at
     http://www.eclipse.org/legal/epl-2.0.
 """
 
@@ -26,20 +26,16 @@ if 'SUMO_HOME' in os.environ:
 else:
     sys.exit("Please declare environment variable 'SUMO_HOME'")
 
-logging.basicConfig(handlers=[logging.StreamHandler(sys.stdout)], level=logging.INFO,
-                    format='[%(asctime)s] %(levelname)s: %(message)s',
-                    datefmt='%m/%d/%Y %I:%M:%S %p')
-
 class Activities():
     """ Generates the activity chains. """
 
     ## Activity
     Activity = collections.namedtuple(
         'Activity',
-        ['activity', 'fromEdge', 'toEdge', 'arrivalPos', 'start', 'duration'],
-        defaults=(None,) * 6)
+        ['activity', 'fromEdge', 'toEdge', 'arrivalPos', 'start', 'duration', 'final'],
+        defaults=(None,) * 7)
 
-    def __init__(self, conf, sumo, environment, profiling=False):
+    def __init__(self, conf, sumo, environment, logger, profiling=False):
         """
         Initialize the synthetic population.
             :param conf: distionary with the configurations
@@ -49,6 +45,7 @@ class Activities():
         self._conf = conf
         self._sumo = sumo
         self._env = environment
+        self.logger = logger
 
         self._max_retry_number = 1000
         if 'maxNumTry' in conf:
@@ -113,13 +110,13 @@ class Activities():
                     if not sumoutils.is_valid_route(
                             mode, route, self._conf['intermodalOptions']['vehicleAllowedParking']):
                         route = None
-                        logging.debug(
+                        self.logger.debug(
                             '_stages_define_main_locations: findIntermodalRoute mode unusable.')
                 except TraCIException:
-                    logging.debug('_stages_define_main_locations: findIntermodalRoute FAILED.')
+                    self.logger.debug('_stages_define_main_locations: findIntermodalRoute FAILED.')
                     route = None
             else:
-                logging.debug('_stages_define_main_locations: unusable pair of edges.')
+                self.logger.debug('_stages_define_main_locations: unusable pair of edges.')
         if route:
             return from_edge, to_edge
         raise sagaexceptions.TripGenerationActivityError(
@@ -181,7 +178,7 @@ class Activities():
         minor_axe = numpy.sqrt(numpy.square(major_axe) - numpy.square(length))
         radius = minor_axe / 2.0
 
-        logging.debug('_random_location_circle: %s [%.2f]', center, radius)
+        self.logger.debug('_random_location_circle: %s [%.2f]', center, radius)
         edges = self._env.get_all_neigh_edges(center, radius)
         if not edges:
             raise sagaexceptions.TripGenerationActivityError(
@@ -215,7 +212,7 @@ class Activities():
         length = None
         try:
             length = self._sumo.simulation.findRoute(focus1, focus2).length
-            logging.debug('_random_location_ellipse: %s --> %s [%.2f]', focus1, focus2, length)
+            self.logger.debug('_random_location_ellipse: %s --> %s [%.2f]', focus1, focus2, length)
         except TraCIException:
             raise sagaexceptions.TripGenerationActivityError(
                 'No route between {} and {}'.format(focus1, focus2))
@@ -238,8 +235,8 @@ class Activities():
                 first = self._sumo.simulation.findRoute(focus1, edge).length
                 second = self._sumo.simulation.findRoute(edge, focus2).length
                 if first + second <= major_axe:
-                    logging.debug('_random_location_ellipse: %s --> %s [%.2f]', focus1, edge, first)
-                    logging.debug(
+                    self.logger.debug('_random_location_ellipse: %s --> %s [%.2f]', focus1, edge, first)
+                    self.logger.debug(
                         '_random_location_ellipse: %s --> %s [%.2f]', edge, focus2, second)
                     return edge
             except TraCIException:
@@ -260,12 +257,13 @@ class Activities():
         person_stages = dict()
         for pos, activity in enumerate(activity_chain):
             if activity not in self._conf['activities']:
-                raise Exception('Activity {} is not define in the config file.'.format(activity))
+                raise sagaexceptions.TripGenerationActivityError(
+                    'Activity {} is not define in the config file.'.format(activity))
             _start, _duration = self._get_timing_from_activity(activity)
             if pos == 0:
                 if activity != 'Home':
-                    raise Exception("Every activity chain MUST start with 'Home',"
-                                    " '{}' given.".format(activity))
+                    raise sagaexceptions.TripGenerationActivityError(
+                        "Every activity chain MUST start with 'Home', '{}' given.".format(activity))
                 ## Beginning
                 person_stages[pos] = self.Activity(
                     activity=activity, fromEdge=from_edge, start=_start, duration=_duration)
@@ -283,7 +281,8 @@ class Activities():
                     activity=activity, toEdge=from_edge, start=_start, duration=_duration)
 
         if len(person_stages) <= 2:
-            raise Exception("Invalid activity chain. (Minimal: H -> P-? -> H", activity_chain)
+            raise sagaexceptions.TripGenerationActivityError(
+                "Invalid activity chain. (Minimal: H -> P-? -> H)", activity_chain)
 
         ## Define secondary activity location
         person_stages = self._stages_define_secondary_locations(person_stages, from_edge, to_edge)
@@ -317,6 +316,13 @@ class Activities():
                     person_stages)
             last_edge = person_stages[pos].toEdge
             pos += 1
+
+        ## Set the final activity to True
+        pos = 1
+        while pos in person_stages:
+            person_stages[pos] = person_stages[pos]._replace(final=False)
+            pos += 1
+        person_stages[pos-1] = person_stages[pos-1]._replace(final=True)
 
         return person_stages
 

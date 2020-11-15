@@ -44,7 +44,7 @@ def get_intermodal_mode_parameters(mode, parking_requirements):
     if mode == 'walk':
         return '', 'pedestrian', ''
     if mode == 'on-demand':
-        return 'taxi', '', 'on-demand'
+        return 'taxi', '', 'on-demand'  # The on-demand parameter needs to be confirmed.
     if mode in parking_requirements:
         return '', '', mode     # Required to avoid the exchange point outside the parkingStop
     return 'car', '', mode      # Enables the walk from the exchange points to destination
@@ -64,7 +64,7 @@ def is_valid_route(mode, route, parking_requirements):
         for stage in route:
             if stage.line:
                 return True
-    elif _mode in ('car', 'bicycle'):
+    elif _mode in ('car', 'bicycle') or _vtype in parking_requirements:
         for stage in route:
             if stage.type == tc.STAGE_DRIVING and len(stage.edges) >= 2:
                 return True

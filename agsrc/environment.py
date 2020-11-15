@@ -28,14 +28,10 @@ if 'SUMO_HOME' in os.environ:
 else:
     sys.exit("Please declare environment variable 'SUMO_HOME'")
 
-logging.basicConfig(handlers=[logging.StreamHandler(sys.stdout)], level=logging.INFO,
-                    format='[%(asctime)s] %(levelname)s: %(message)s',
-                    datefmt='%m/%d/%Y %I:%M:%S %p')
-
 class Environment():
     """ Loads, stores, interact the SAGA evironment required for the mobility generation. """
 
-    def __init__(self, conf, sumo, profiling=False):
+    def __init__(self, conf, sumo, logger, profiling=False):
         """
         Initialize the synthetic population.
             :param conf: distionary with the configurations
@@ -44,6 +40,7 @@ class Environment():
         """
         self._conf = conf
         self._sumo = sumo
+        self.logger = logger
 
         self._max_retry_number = 1000
         if 'maxNumTry' in conf:
@@ -53,10 +50,10 @@ class Environment():
 
         self._random_generator = RandomState(seed=self._conf['seed'])
 
-        logging.info('Loading SUMO net file %s', conf['SUMOnetFile'])
+        self.logger.info('Loading SUMO net file %s', conf['SUMOnetFile'])
         self.sumo_network = sumolib.net.readNet(conf['SUMOnetFile'])
 
-        logging.info('Loading SUMO parking lots from file %s',
+        self.logger.info('Loading SUMO parking lots from file %s',
                      conf['SUMOadditionals']['parkings'])
         self._blacklisted_edges = set()
         self._sumo_parkings = collections.defaultdict(list)
@@ -64,22 +61,22 @@ class Environment():
         self._parking_position = dict()
         self._load_parkings(conf['SUMOadditionals']['parkings'])
 
-        logging.info('Loading SUMO taxi stands from file %s',
+        self.logger.info('Loading SUMO taxi stands from file %s',
                      conf['intermodalOptions']['taxiStands'])
         self._sumo_taxi_stands = collections.defaultdict(list)
         self._taxi_stand_cache = dict()
         self._taxi_stand_position = dict()
         self._load_taxi_stands(conf['intermodalOptions']['taxiStands'])
 
-        logging.info('Loading TAZ weights from %s', conf['population']['tazWeights'])
+        self.logger.info('Loading TAZ weights from %s', conf['population']['tazWeights'])
         self._taz_weights = dict()
         self._load_weights_from_csv(conf['population']['tazWeights'])
 
-        logging.info('Loading buildings weights from %s', conf['population']['buildingsWeight'])
+        self.logger.info('Loading buildings weights from %s', conf['population']['buildingsWeight'])
         self._buildings_by_taz = dict()
         self._load_buildings_weight_from_csv_dir(conf['population']['buildingsWeight'])
 
-        logging.info('Loading edges in each TAZ from %s', conf['population']['tazDefinition'])
+        self.logger.info('Loading edges in each TAZ from %s', conf['population']['tazDefinition'])
         self._edges_by_taz = dict()
         self._load_edges_from_taz(conf['population']['tazDefinition'])
 
@@ -138,7 +135,7 @@ class Environment():
         allfiles = [os.path.join(directory, f)
                     for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
         for filename in sorted(allfiles):
-            logging.debug('Loding %s', filename)
+            self.logger.debug('Loding %s', filename)
             with open(filename, 'r') as csvfile:
                 weightreader = csv.reader(csvfile)
                 header = None
@@ -156,7 +153,7 @@ class Environment():
                                           row[5]))          # pedestrian edge
 
                 if len(buildings) < 10:
-                    logging.debug('Dropping %s, only %d buildings found.', filename, len(buildings))
+                    self.logger.debug('Dropping %s, only %d buildings found.', filename, len(buildings))
                     continue
 
                 weighted_buildings = []
@@ -191,12 +188,12 @@ class Environment():
                     _edge = self._random_generator.choice(_edges)
                 else:
                     _edge = self._random_generator.choice(self.sumo_network.getEdges()).getID()
-                _lane = self.get_stopping_lane(_edge, 'passenger')
+                _lane = self.get_stopping_lane(_edge, ['taxi', 'passenger'])
             except sagaexceptions.TripGenerationGenericError:
                 _retry_counter += 1
                 _lane = None
         if _lane is None:
-            logging.critical(
+            self.logger.critical(
                 '_get_random_lane_from_TAZs with "%s" generated %d errors, '
                 'taxi generation aborted..', pformat(_locations), _retry_counter)
         return _lane
@@ -210,6 +207,20 @@ class Environment():
         edges = [edge.getID() for edge, _ in edges]
         return edges
 
+    def get_arrival_pos_from_edge(self, edge, position):
+        """
+        If the position is too close to the end, it may genrate error with
+        findIntermodalRoute.
+        """
+        length = self.sumo_network.getEdge(edge).getLength()
+        if length < self._conf['minEdgeAllowed']:
+            return None
+        if position > length - 1.0:
+            return length - 1.0
+        if position < 1.0:
+            return 1.0
+        return position
+
     def get_random_pos_from_edge(self, edge):
         """ Return a random position in the given edge. """
         length = self.sumo_network.getEdge(edge).getLength()
@@ -221,7 +232,7 @@ class Environment():
         begin = self._conf['stopBufferDistance'] / 2.0
         end = length - begin
         position = (end - begin) * self._random_generator.random_sample() + begin
-        logging.debug('get_random_pos_from_edge: [%s] %f (%f)', edge, position, length)
+        self.logger.debug('get_random_pos_from_edge: [%s] %f (%f)', edge, position, length)
         return position
 
     ## ---- PAIR SELECTION: origin - destination - mode ---- ##
@@ -345,13 +356,18 @@ class Environment():
         return edges[-1][1], len(edges) - 1
 
 
-    def get_stopping_lane(self, edge, vtype):
-        """ Returns the vehicle-friendly stopping lange closer to the sidewalk. """
+    def get_stopping_lane(self, edge, vtypes=['passenger']):
+        """
+        Returns the vehicle-friendly stopping lane closer to the sidewalk that respects the
+        configuration parameter 'minEdgeAllowed'.
+        """
         for lane in self.sumo_network.getEdge(edge).getLanes():
-            if lane.allows(vtype):
-                return lane.getID()
+            if lane.getLength() >= self._conf['minEdgeAllowed']:
+                for vtype in vtypes:
+                    if lane.allows(vtype):
+                        return lane.getID()
         raise sagaexceptions.TripGenerationGenericError(
-            '"{}" cannot stop on edge {}'.format(vtype, edge))
+            '"{}" cannot stop on edge {}'.format(vtypes, edge))
 
     ## PARKING AREAS: location and selection
 
@@ -393,7 +409,7 @@ class Environment():
             self._parking_cache[edge] = ret
             return ret
 
-        logging.fatal('Edge %s is not reachable from any parking lot.', edge)
+        self.logger.fatal('Edge %s is not reachable from any parking lot.', edge)
         self._blacklisted_edges.add(edge)
         return None, None, None
 
