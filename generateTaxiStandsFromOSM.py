@@ -10,7 +10,6 @@
 """
 
 import argparse
-import logging
 import os
 import sys
 import xml.etree.ElementTree
@@ -21,13 +20,6 @@ if 'SUMO_HOME' in os.environ:
     import sumolib
 else:
     sys.exit("please declare environment variable 'SUMO_HOME'")
-
-def logs():
-    """ Log init. """
-    stdout_handler = logging.StreamHandler(sys.stdout)
-    logging.basicConfig(handlers=[stdout_handler], level=logging.WARN,
-                        format='[%(asctime)s] %(levelname)s: %(message)s',
-                        datefmt='%m/%d/%Y %I:%M:%S %p')
 
 def get_options(cmd_args=None):
     """ Argument Parser """
@@ -68,10 +60,10 @@ class TaxiStandsFromOSMGenerator():
     def stands_generation(self):
         """ Main finction to generate all the taxi stands. """
 
-        logging.info("Filtering OSM for taxi stands..")
+        print("Filtering OSM for taxi stands..")
         self._filter_stands()
 
-        logging.info("Create stands for SUMO..")
+        print("Create stands for SUMO..")
         self._stands_to_edges()
         self._stands_sumo()
 
@@ -117,7 +109,7 @@ class TaxiStandsFromOSMGenerator():
                 node['y'] = y_coord
                 self._osm_stands[node['id']] = node
 
-        logging.info('Gathered %d taxi stands.', len(list(self._osm_stands.keys())))
+        print('Gathered {} taxi stands.'.format(len(list(self._osm_stands.keys()))))
 
     _TAXI_STANDS_DICT = {
         'amenity': ['taxi'],
@@ -175,8 +167,8 @@ class TaxiStandsFromOSMGenerator():
             radius += 50.0
 
         if dist_lane > 50.0:
-            logging.info("Alert: taxi stand %s is %d meters from lane %s.",
-                         stand['id'], dist_lane, lane_info.getID())
+            print("Alert: taxi stand {} is {} meters from lane {}.".format(
+                stand['id'], dist_lane, lane_info.getID()))
 
         return (edge_info, lane_info, location)
 
@@ -191,7 +183,7 @@ class TaxiStandsFromOSMGenerator():
         for tag in self._osm_stands[stand_id]['tag']:
             if tag['k'] == 'capacity':
                 return int(tag['v'])
-        logging.fatal("Taxi stand %s has no capacity tag.", stand_id)
+        print("Taxi stand {} has no capacity tag.".format(stand_id))
         return self._options.default_capacity
 
     def _stands_sumo(self):
@@ -230,28 +222,24 @@ class TaxiStandsFromOSMGenerator():
 
     def _save_stands_to_file(self, filename):
         """ Save the taxi stands into a SUMO XML additional file. """
-        logging.info("Creation of %s", filename)
+        print("Creation of {}".format(filename))
         with open(filename, 'w') as outfile:
             list_of_stands = ''
             for stand in self._sumo_stands.values():
                 list_of_stands += self._PARKINGS_TPL.format(
                     id=stand['id'], lane=stand['lane'], start=stand['start'],
                     end=stand['end'], capacity=stand['capacity'])
-
             content = list_of_stands
             outfile.write(self._ADDITIONALS_TPL.format(content=content))
-        logging.info("%s created.", filename)
+        print("{} created.".format(filename))
 
 def main(cmd_args):
     """ Extract Parking Areas from OSM. """
     options = get_options(cmd_args)
-
     stands = TaxiStandsFromOSMGenerator(options)
     stands.stands_generation()
     stands.save_stands_to_file(options.output)
-
-    logging.info('Done.')
+    print('Done.')
 
 if __name__ == "__main__":
-    logs()
     main(sys.argv[1:])

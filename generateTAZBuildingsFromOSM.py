@@ -11,15 +11,16 @@
 
 import argparse
 import csv
-import logging
 import multiprocessing
 import os
+from random import choice
 import sys
 import xml.etree.ElementTree
 
 from functools import partial
 import pyproj
 import numpy
+import folium
 
 import shapely.geometry as geometry
 from shapely.ops import transform
@@ -31,13 +32,6 @@ if 'SUMO_HOME' in os.environ:
     import sumolib
 else:
     sys.exit("please declare environment variable 'SUMO_HOME'")
-
-def logs():
-    """ Log init. """
-    stdout_handler = logging.StreamHandler(sys.stdout)
-    logging.basicConfig(handlers=[stdout_handler], level=logging.WARN,
-                        format='[%(asctime)s] %(levelname)s: %(message)s',
-                        datefmt='%m/%d/%Y %I:%M:%S %p')
 
 def get_options(cmd_args=None):
     """ Argument Parser """
@@ -85,50 +79,48 @@ class GenerateTAZandWeightsFromOSM():
             'lon': 0.0,
         }
 
-        logging.info('Filtering administrative boudaries from OSM..')
+        print('Filtering administrative boudaries from OSM..')
         self._filter_boundaries_from_osm()
-        logging.info("Extracting TAZ from OSM boundaries.")
+        print("Extracting TAZ from OSM boundaries.")
         self._build_taz_from_osm()
-        logging.info("Computing TAZ areas...")
+        print("Computing TAZ areas...")
         self._taz_areas()
 
     def generate_taz(self):
         """ Generate TAZ by filtering edges,
             additionally computing TAZ weight through nodes and area. """
-        logging.info("Filtering edges...")
+        print("Filtering edges...")
         self._edges_filter()
-        logging.info("Filtering nodes...")
+        print("Filtering nodes...")
         self._nodes_filter()
 
     def generate_buildings(self):
         """ Generate the buildings weight with edge and TAZ association."""
-        logging.info("Filtering buildings...")
+        print("Filtering buildings...")
         self._filter_buildings_from_osm()
-        logging.info("Processing buildings...")
+        print("Processing buildings...")
         self._processing_buildings()
-        logging.info("Sorting buildings in the TAZ...")
+        print("Sorting buildings in the TAZ...")
         self._sort_buildings()
 
     def save_sumo_taz(self, filename):
         """ Save TAZ to file. """
-        logging.info("Creation of %s", filename)
+        print("Creation of %s", filename)
         self._write_taz_file(filename)
 
     def save_taz_weigth(self, filename):
         """ Save weigths to file."""
-        logging.info("Creation of %s", filename)
+        print("Creation of %s", filename)
         self._write_csv_file(filename)
 
     def save_buildings_weigth(self, filename):
         """ Save building weights to file."""
-        logging.info("Creation of %s", filename)
+        print("Creation of %s", filename)
         self._write_poly_files(filename)
 
     def save_taz_to_osm(self, filename):
         """ Plot the boundaries using folium to html file."""
-        import folium
-        from random import choice
-        logging.info("Plotting TAZ to OpenStreetMap in file %s.", filename)
+        print("Plotting TAZ to OpenStreetMap in file {}.".format(filename))
         colors = ['#0000FF', '#0040FF', '#0080FF', '#00FFB0', '#00E000', '#80FF00',
                   '#FFFF00', '#FFC000', '#FF0000']
         osm_map = folium.Map(location=[self._center['lat'], self._center['lon']])
@@ -176,8 +168,8 @@ class GenerateTAZandWeightsFromOSM():
         for node in tqdm(self._osm['node']):
             if node['id'] in self._osm_boundaries['node'].keys():
                 self._osm_boundaries['node'][node['id']] = node
-        logging.info('Found %d administrative boundaries.',
-                     len(self._osm_boundaries['relation'].keys()))
+        print('Found {} administrative boundaries.'.format(
+            len(self._osm_boundaries['relation'].keys())))
 
     def _build_taz_from_osm(self):
         """ Extract TAZ from OSM boundaries. """
@@ -185,7 +177,7 @@ class GenerateTAZandWeightsFromOSM():
             for id_boundary, boundary in tqdm(self._osm_boundaries['relation'].items()):
 
                 if not boundary:
-                    logging.critical('Empty boundary %s', id_boundary)
+                    print('Empty boundary {}'.format(id_boundary))
                     continue
 
                 list_of_nodes = []
@@ -199,13 +191,14 @@ class GenerateTAZandWeightsFromOSM():
 
                 ## --------------------------- Consistency checks ----------------------------------
                 if len(list_of_nodes) <= 2:
-                    logging.critical('Boundary %s has %d nodes.', id_boundary, len(list_of_nodes))
+                    print(
+                        'Boundary {} has {} nodes.'.format(id_boundary, len(list_of_nodes)))
                     continue
                 try:
                     _, _ = geometry.MultiPoint(list_of_nodes).convex_hull.exterior.coords.xy
                 except AttributeError:
-                    logging.critical('Impossible to create the convex hull for boundary %s.',
-                                     id_boundary)
+                    print(
+                        'Impossible to create the convex hull for boundary {}.'.format(id_boundary))
                     continue
                 # ----------------------------------------------------------------------------------
 
@@ -231,7 +224,7 @@ class GenerateTAZandWeightsFromOSM():
                     'buildings_cumul_area': 0,
                 }
 
-            logging.info('Generated %d TAZ from OSM boundaries.', len(self._taz.keys()))
+            print('Generated {} TAZ from OSM boundaries.'.format(len(self._taz.keys())))
 
         if not self._taz:
             ## Generate only one taz with everything in it.
@@ -249,7 +242,7 @@ class GenerateTAZandWeightsFromOSM():
                 'buildings': set(),
                 'buildings_cumul_area': 0,
             }
-            logging.info('Generated 1 TAZ containing everything.')
+            print('Generated 1 TAZ containing everything.')
             self._param.single_taz = True
 
     def _taz_areas(self):
@@ -280,7 +273,7 @@ class GenerateTAZandWeightsFromOSM():
                 empty_taz.add(id_taz)
         for id_taz in empty_taz:
             del self._taz[id_taz]
-        logging.info('Saved %d TAZ after the edges filtering.', len(self._taz.keys()))
+        print('Saved {} TAZ after the edges filtering.'.format(len(self._taz.keys())))
 
     def _nodes_filter(self):
         """ Sort nodes to the right TAZ """
@@ -320,7 +313,7 @@ class GenerateTAZandWeightsFromOSM():
             self._osm_buildings[way['id']]['nodes'] = list()
             for ndid in way['nd']:
                 self._osm_buildings[way['id']]['nodes'].append(nodes[ndid['ref']])
-        logging.info('Found %d buildings.', len(self._osm_buildings.keys()))
+        print('Found {} buildings.'.format(len(self._osm_buildings.keys())))
 
     def _processing_buildings(self):
         """ Compute centroid and approximated area for each building (if necessary). """
@@ -361,7 +354,7 @@ class GenerateTAZandWeightsFromOSM():
         with multiprocessing.Pool(processes=self._param.processes) as pool:
             list_parameters = list()
             slices = numpy.array_split(list(self._osm_buildings.values()), self._param.processes)
-            logging.info('Preprocessing for multiprocessing...')
+            print('Preprocessing for multiprocessing...')
             for buildings in slices:
                 parameters = {
                     'buildings': buildings,
@@ -370,7 +363,7 @@ class GenerateTAZandWeightsFromOSM():
                     'net_file': self._param.net_file,
                 }
                 list_parameters.append(parameters)
-            logging.info('Buildings to TAZ multiprocessing...')
+            print('Buildings to TAZ multiprocessing...')
             for res in pool.imap_unordered(self._sort_buildings_into_taz, list_parameters):
                 for id_taz, assocs in res.items():
                     self._taz[id_taz]['buildings'] |= assocs['buildings']
@@ -425,11 +418,11 @@ class GenerateTAZandWeightsFromOSM():
                 radius += 50.0
 
             if generic_edge_info and generic_dist_edge > 500.0:
-                logging.info("A building entrance [passenger] is %d meters away.",
-                             generic_dist_edge)
+                print(
+                    "A building entrance [passenger] is {} meters away.".format(generic_dist_edge))
             if pedestrian_edge_info and pedestrian_dist_edge > 500.0:
-                logging.info("A building entrance [pedestrian] is %d meters away.",
-                             pedestrian_dist_edge)
+                print("A building entrance [pedestrian] is {} meters away.".format(
+                    pedestrian_dist_edge))
 
             return generic_edge_info, pedestrian_edge_info
 
@@ -550,7 +543,6 @@ def _parse_xml_file(xml_file):
 
 def main(cmd_args):
     """ Generate TAZ and Buildings weight from OSM. """
-
     args = get_options(cmd_args)
     taz_generator = GenerateTAZandWeightsFromOSM(args)
     taz_generator.generate_taz()
@@ -560,9 +552,7 @@ def main(cmd_args):
     taz_generator.save_buildings_weigth(args.poly_output)
     if args.html_filename:
         taz_generator.save_taz_to_osm(args.html_filename)
-
-    logging.info("Done.")
+    print("Done.")
 
 if __name__ == "__main__":
-    logs()
     main(sys.argv[1:])

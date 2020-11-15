@@ -10,7 +10,6 @@
 """
 
 import argparse
-import logging
 import os
 import sys
 import xml.etree.ElementTree
@@ -21,13 +20,6 @@ if 'SUMO_HOME' in os.environ:
     import sumolib
 else:
     sys.exit("please declare environment variable 'SUMO_HOME'")
-
-def logs():
-    """ Log init. """
-    stdout_handler = logging.StreamHandler(sys.stdout)
-    logging.basicConfig(handlers=[stdout_handler], level=logging.WARN,
-                        format='[%(asctime)s] %(levelname)s: %(message)s',
-                        datefmt='%m/%d/%Y %I:%M:%S %p')
 
 def get_options(cmd_args=None):
     """ Argument Parser """
@@ -64,10 +56,10 @@ class ParkingAreasFromOSMGenerator():
     def parkings_generation(self):
         """ Main finction to generate all the parking areas. """
 
-        logging.info("Filtering OSM for parking lot..")
+        print("Filtering OSM for parking lot..")
         self._filter_parkings()
 
-        logging.info("Create parkings for SUMO..")
+        print("Create parkings for SUMO..")
         self._parkings_to_edges()
         self._parkings_sumo()
 
@@ -113,7 +105,7 @@ class ParkingAreasFromOSMGenerator():
                 node['y'] = y_coord
                 self._osm_parkings[node['id']] = node
 
-        logging.info('Gathered %d parking lots.', len(list(self._osm_parkings.keys())))
+        print('Gathered {} parking lots.'.format(len(list(self._osm_parkings.keys()))))
 
     _PARKING_DICT = {
         'amenity': ['parking', 'motorcycle_parking', 'parking_entrance'],
@@ -174,8 +166,8 @@ class ParkingAreasFromOSMGenerator():
             radius += 50.0
 
         if dist_lane > 50.0:
-            logging.info("Alert: parking lots %s is %d meters from lane %s.",
-                         parking['id'], dist_lane, lane_info.getID())
+            print("Alert: parking lots {} is {} meters from lane {}.".format(
+                parking['id'], dist_lane, lane_info.getID()))
 
         return (edge_info, lane_info, location)
 
@@ -190,7 +182,7 @@ class ParkingAreasFromOSMGenerator():
         for tag in self._osm_parkings[parking_id]['tag']:
             if tag['k'] == 'capacity':
                 return int(tag['v'])
-        logging.fatal("Parking %s has no capacity tag.", parking_id)
+        print("Parking {} has no capacity tag.".format(parking_id))
         return self._options.default_capacity
 
     def _parkings_sumo(self):
@@ -229,28 +221,24 @@ class ParkingAreasFromOSMGenerator():
 
     def _save_parkings_to_file(self, filename):
         """ Save the parking lots into a SUMO XML additional file. """
-        logging.info("Creation of %s", filename)
+        print("Creation of {}".format(filename))
         with open(filename, 'w') as outfile:
             list_of_parkings = ''
             for parking in self._sumo_parkings.values():
                 list_of_parkings += self._PARKINGS_TPL.format(
                     id=parking['id'], lane=parking['lane'], start=parking['start'],
                     end=parking['end'], capacity=parking['capacity'])
-
             content = list_of_parkings
             outfile.write(self._ADDITIONALS_TPL.format(content=content))
-        logging.info("%s created.", filename)
+        print("{} created.".format(filename))
 
 def main(cmd_args):
     """ Extract Parking Areas from OSM. """
     options = get_options(cmd_args)
-
     parkings = ParkingAreasFromOSMGenerator(options)
     parkings.parkings_generation()
     parkings.save_parkings_to_file(options.output)
-
-    logging.info('Done.')
+    print('Done.')
 
 if __name__ == "__main__":
-    logs()
     main(sys.argv[1:])
