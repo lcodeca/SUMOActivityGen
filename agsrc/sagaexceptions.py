@@ -10,13 +10,11 @@
 """
 
 import logging
+import json
 from pprint import pformat
 import sys
 
-logging.basicConfig(handlers=[logging.StreamHandler(sys.stdout)],
-                    level=logging.INFO,
-                    format='[%(asctime)s] %(levelname)s: %(message)s',
-                    datefmt='%m/%d/%Y %I:%M:%S %p')
+LOGGER = logging.getLogger('ActivityGen')
 
 class TripGenerationGenericError(Exception):
     """
@@ -27,54 +25,69 @@ class TripGenerationGenericError(Exception):
         super().__init__()
         self.message = message
         if self.message:
-            logging.debug(self.message)
+            LOGGER.debug(self.message)
 
 class TripGenerationActivityError(TripGenerationGenericError):
     """
     During the generation from the activity chains, various erroroneous states can be reached.
     """
-    def __init__(self, message=None, activity=None):
+    def __init__(self, message, activity=None):
         """ Init the error message. """
         super().__init__()
         self.message = message
         self.activity = activity
-        if self.message is not None:
-            logging.debug(self.message)
+        LOGGER.debug(self.message)
         if self.activity is not None:
             with open('TripGenerationActivityError.log', 'a') as openfile:
-                openfile.write(message + '\n')
-                openfile.write(pformat(activity) + '\n')
+                # openfile.write(message + '\n')
+                json.dump(
+                    {
+                        'msg': message,
+                        'activity': activity,
+                    },
+                    openfile, indent=2)
+                # openfile.write(pformat(activity) + '\n')
 
 class TripGenerationRouteError(TripGenerationGenericError):
     """
     During the step by step generation of the trip, it is possible to reach a state in which
         some of the chosen locations are impossible to reach.
     """
-    def __init__(self, message=None, route=None):
+    def __init__(self, message, route=None):
         """ Init the error message. """
         super().__init__()
         self.message = message
         self.route = route
-        if self.message is not None:
-            logging.debug(self.message)
+        LOGGER.debug(self.message)
         if self.route is not None:
             with open('TripGenerationRouteError.log', 'a') as openfile:
-                openfile.write(message + '\n')
-                openfile.write(pformat(route) + '\n')
+                # openfile.write(message + '\n')
+                json.dump(
+                    {
+                        'msg': message,
+                        'route': route,
+                    },
+                    openfile, indent=2)
+                # openfile.write(pformat(route) + '\n')
 
 class TripGenerationInconsistencyError(TripGenerationGenericError):
     """
     During the step by step generation of the trip, it is possible to reach a state in which
         some of the chosen modes are impossible to be used in that order.
     """
-    def __init__(self, message=None, plan=None):
+    def __init__(self, message, plan=None):
         """ Init the error message. """
         super().__init__()
         self.message = message
         self.plan = plan
-        if self.message is not None:
-            logging.debug(self.message)
+        LOGGER.debug(self.message)
         if self.plan is not None:
             with open('TripGenerationInconsistencyError.log', 'a') as openfile:
-                openfile.write(message + '\n')
-                openfile.write(pformat(plan) + '\n')
+                # openfile.write(message + '\n')
+                json.dump(
+                    {
+                        'msg': message,
+                        'plan': plan,
+                    },
+                    openfile, indent=2)
+                # openfile.write(pformat(plan) + '\n')
