@@ -83,7 +83,7 @@ class SAGAReport(object):
         print('Processing {} tripinfo file.'.format(self.tripinfo_file))
         for person, data in self.personinfo.items():
             for tag, stage in data['stages']:
-                print('[{}] {} \n{}'.format(person, tag, pformat(stage)))
+                # print('[{}] {} \n{}'.format(person, tag, pformat(stage)))
                 if tag == 'stop':
                     self.activity_stats[stage['actType']].append({
                         'arrival': stage['arrival'],
