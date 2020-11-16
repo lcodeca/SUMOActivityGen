@@ -11,15 +11,7 @@
 
 import argparse
 import csv
-import logging
 import sys
-
-def logs():
-    """ Log init. """
-    stdout_handler = logging.StreamHandler(sys.stdout)
-    logging.basicConfig(handlers=[stdout_handler], level=logging.WARN,
-                        format='[%(asctime)s] %(levelname)s: %(message)s',
-                        datefmt='%m/%d/%Y %I:%M:%S %p')
 
 def get_options(cmd_args=None):
     """ Argument Parser """
@@ -48,7 +40,7 @@ class AmitranFromTAZWeightsGenerator():
         """ Load the TAZ weight from a CSV file. """
         with open(self._options.taz_file, 'r') as csvfile:
             weightreader = csv.reader(csvfile)
-            header = None
+            header = []
             for row in weightreader:
                 if not header:
                     header = row
@@ -91,7 +83,7 @@ class AmitranFromTAZWeightsGenerator():
 
     def save_odmatrix_to_file(self, filename):
         """ Save the OD-matric in Amitran format. """
-        logging.info("Creation of %s", filename)
+        print("Creation of {}".format(filename))
         with open(filename, 'w') as outfile:
             list_of_odpairs = ''
             for pair in self._odpairs:
@@ -99,17 +91,14 @@ class AmitranFromTAZWeightsGenerator():
                                                           dest=pair['destination'],
                                                           orig=pair['origin'])
             outfile.write(self.AMITRAN_TPL.format(odpair=list_of_odpairs))
-        logging.info("%s created.", filename)
+        print("{} created.".format(filename))
 
 def main(cmd_args):
     """ Generate the default Amitran OD-matrix from TAZ weights. """
     options = get_options(cmd_args)
-
     odmatrix = AmitranFromTAZWeightsGenerator(options)
     odmatrix.save_odmatrix_to_file(options.output)
-
-    logging.info('Done.')
+    print('Done.')
 
 if __name__ == "__main__":
-    logs()
     main(sys.argv[1:])

@@ -15,6 +15,10 @@
     "intermodalOptions": {
         "parkingAreaBlacklist": [],
         "vehicleAllowedParking": ["passenger", "motorcycle", "evehicle"],
+        "taxiFleetSize": 0,
+        "taxiFleetInitialTAZs": [],
+        "taxiStands": "osm_taxi_stands.add.xml",
+        "taxiStandsBlacklist": [],
         "modeSelection": "PROBABILITY"
     },
 
@@ -29,7 +33,7 @@
     "taz": {},
 
     "activities": {
-        "P-D": {
+        "P-Day": {
             "duration": {
                 "m": 27000,
                 "s": 3600
@@ -39,7 +43,7 @@
                 "s": 3600
             }
         },
-        "P-M": {
+        "P-Morning": {
             "duration": {
                 "m": 14400,
                 "s": 3600
@@ -49,7 +53,7 @@
                 "s": 3600
             }
         },
-        "P-A": {
+        "P-Afternoon": {
             "duration": {
                 "m": 14400,
                 "s": 3600
@@ -59,14 +63,14 @@
                 "s": 3600
             }
         },
-        "S-S": {
+        "S-Short": {
             "duration": {
                 "m": 3600,
                 "s": 3600
             },
             "start": {}
         },
-        "S-L": {
+        "S-Long": {
             "duration": {
                 "m": 10800,
                 "s": 3600
@@ -88,11 +92,46 @@
             "loc_origin": "TBD",
             "loc_primary": "TBD",
             "activityChains": [
-                [0.2, ["Home", "P-D", "Home"], [["public", 0.2], ["bicycle", 0.2], ["passenger", 0.2], ["motorcycle", 0.2], ["on-demand", 0.2]]],
-                [0.2, ["Home", "P-M", "S-S", "P-A", "Home"], [["public", 0.2], ["bicycle", 0.2], ["passenger", 0.2], ["motorcycle", 0.2], ["on-demand", 0.2]]],
-                [0.2, ["Home", "P-D", "S-L", "Home"], [["public", 0.2], ["bicycle", 0.2], ["passenger", 0.2], ["motorcycle", 0.2], ["on-demand", 0.2]]],
-                [0.2, ["Home", "P-D", "Home", "S-S", "Home"], [["public", 0.2], ["bicycle", 0.2], ["passenger", 0.2], ["motorcycle", 0.2], ["on-demand", 0.2]]],
-                [0.2, ["Home", "S-L", "P-A", "Home" ], [["public", 0.2], ["bicycle", 0.2], ["passenger", 0.2], ["motorcycle", 0.2], ["on-demand", 0.2]]]
+                [0.1,
+                    ["Home", "P-Day", "Home"],
+                    [["walk", 0.12], ["bicycle", 0.11], ["public", 0.11], ["passenger", 0.11], ["motorcycle", 0.11], ["on-demand", 0.11], ["commercial", 0.11], ["special", 0.11], ["evehicle", 0.11]]
+                ],
+                [0.1,
+                    ["Home", "P-Morning", "Home", "P-Afternoon", "Home"],
+                    [["walk", 0.12], ["bicycle", 0.11], ["public", 0.11], ["passenger", 0.11], ["motorcycle", 0.11], ["on-demand", 0.11], ["commercial", 0.11], ["special", 0.11], ["evehicle", 0.11]]
+                ],
+                [0.1,
+                    ["Home", "P-Day", "S-Short", "Home"],
+                    [["walk", 0.12], ["bicycle", 0.11], ["public", 0.11], ["passenger", 0.11], ["motorcycle", 0.11], ["on-demand", 0.11], ["commercial", 0.11], ["special", 0.11], ["evehicle", 0.11]]
+                ],
+                [0.1,
+                    ["Home", "P-Day", "Home", "S-Short", "Home"],
+                    [["walk", 0.12], ["bicycle", 0.11], ["public", 0.11], ["passenger", 0.11], ["motorcycle", 0.11], ["on-demand", 0.11], ["commercial", 0.11], ["special", 0.11], ["evehicle", 0.11]]
+                ],
+                [0.1,
+                    ["Home", "P-Morning", "S-Short", "P-Afternoon", "Home"],
+                    [["walk", 0.12], ["bicycle", 0.11], ["public", 0.11], ["passenger", 0.11], ["motorcycle", 0.11], ["on-demand", 0.11], ["commercial", 0.11], ["special", 0.11], ["evehicle", 0.11]]
+                ],
+                [0.1,
+                    ["Home", "P-Morning", "S-Short", "P-Afternoon", "S-Short", "Home"],
+                    [["walk", 0.12], ["bicycle", 0.11], ["public", 0.11], ["passenger", 0.11], ["motorcycle", 0.11], ["on-demand", 0.11], ["commercial", 0.11], ["special", 0.11], ["evehicle", 0.11]]
+                ],
+                [0.1,
+                    ["Home", "P-Morning", "S-Long", "Home"],
+                    [["walk", 0.12], ["bicycle", 0.11], ["public", 0.11], ["passenger", 0.11], ["motorcycle", 0.11], ["on-demand", 0.11], ["commercial", 0.11], ["special", 0.11], ["evehicle", 0.11]]
+                ],
+                [0.1,
+                    ["Home", "P-Morning", "S-Long", "Home", "S-Short", "Home"],
+                    [["walk", 0.12], ["bicycle", 0.11], ["public", 0.11], ["passenger", 0.11], ["motorcycle", 0.11], ["on-demand", 0.11], ["commercial", 0.11], ["special", 0.11], ["evehicle", 0.11]]
+                ],
+                [0.1,
+                    ["Home", "S-Long", "P-Afternoon", "Home"],
+                    [["walk", 0.12], ["bicycle", 0.11], ["public", 0.11], ["passenger", 0.11], ["motorcycle", 0.11], ["on-demand", 0.11], ["commercial", 0.11], ["special", 0.11], ["evehicle", 0.11]]
+                ],
+                [0.1,
+                    ["Home", "S-Long", "P-Afternoon", "Home", "S-Short", "Home"],
+                    [["walk", 0.12], ["bicycle", 0.11], ["public", 0.11], ["passenger", 0.11], ["motorcycle", 0.11], ["on-demand", 0.11], ["commercial", 0.11], ["special", 0.11], ["evehicle", 0.11]]
+                ]
             ]
         }
     },

@@ -10,17 +10,9 @@
 """
 
 import argparse
-import logging
 import json
 import sys
 import xml.etree.ElementTree
-
-def logs():
-    """ Log init. """
-    stdout_handler = logging.StreamHandler(sys.stdout)
-    logging.basicConfig(handlers=[stdout_handler], level=logging.INFO,
-                        format='[%(asctime)s] %(levelname)s: %(message)s',
-                        datefmt='%m/%d/%Y %I:%M:%S %p')
 
 def get_options(cmd_args=None):
     """ Argument Parser """
@@ -35,6 +27,8 @@ def get_options(cmd_args=None):
                         help='Output file.')
     parser.add_argument('--population', type=int, dest='population', default=1000,
                         help='Population: number of entities to generate.')
+    parser.add_argument('--taxi-fleet', type=int, dest='taxi_fleet', default=10,
+                        help='Size of the taxi fleet.')
     return parser.parse_args(cmd_args)
 
 class ActivitygenDefaultGenerator():
@@ -46,6 +40,7 @@ class ActivitygenDefaultGenerator():
         self._config_struct = None
         self._amitran_struct = None
         self._load_configurations()
+        self._set_taxi_fleet()
         self._load_odmatrix()
         self._generate_taz()
         self._generate_slices()
@@ -53,6 +48,10 @@ class ActivitygenDefaultGenerator():
     def _load_configurations(self):
         """ Load JSON configuration file in a dict. """
         self._config_struct = json.loads(open(self._options.conf_file).read())
+
+    def _set_taxi_fleet(self):
+        """ Setup the taxi fleet. """
+        self._config_struct['intermodalOptions']['taxiFleetSize'] = self._options.taxi_fleet
 
     def _load_odmatrix(self):
         """ Load the Amitran XML configuration file."""
@@ -99,10 +98,10 @@ class ActivitygenDefaultGenerator():
 
     def save_configuration_file(self, filename):
         """ Save the configuration file. """
-        logging.info("Creation of %s", filename)
+        print("Creation of {}".format(filename))
         with open(filename, 'w') as outfile:
             outfile.write(json.dumps(self._config_struct, indent=4))
-        logging.info("%s created.", filename)
+        print("{} created.".format(filename))
 
 def main(cmd_args):
     """ Generate the default values for SUMOActivityGen. """
@@ -111,8 +110,7 @@ def main(cmd_args):
     defaults = ActivitygenDefaultGenerator(options)
     defaults.save_configuration_file(options.output)
 
-    logging.info('Done.')
+    print('Done.')
 
 if __name__ == "__main__":
-    logs()
     main(sys.argv[1:])

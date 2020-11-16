@@ -12,7 +12,6 @@
 import argparse
 import collections
 import json
-import logging
 import os
 from pprint import pformat
 import sys
@@ -20,23 +19,16 @@ import sys
 from lxml import etree
 import numpy as np
 
-def logs():
-    """ Log init. """
-    stdout_handler = logging.StreamHandler(sys.stdout)
-    logging.basicConfig(handlers=[stdout_handler], level=logging.INFO,
-                        format='[%(asctime)s] %(levelname)s: %(message)s',
-                        datefmt='%m/%d/%Y %I:%M:%S %p')
-
 def get_options(cmd_args=None):
     """ Argument Parser. """
     parser = argparse.ArgumentParser(
         prog='{}'.format(sys.argv[0]), usage='%(prog)s [options]',
         description='SAGA Live Monitoring')
     parser.add_argument(
-        '--tripinfo', type=str, required=True, 
+        '--tripinfo', type=str, required=True,
         help='SUMO TripInfo file (XML).')
     parser.add_argument(
-        '--out', type=str, required=True, 
+        '--out', type=str, required=True,
         help='Output file (CSV).')
     return parser.parse_args(cmd_args)
 
@@ -54,7 +46,8 @@ class SAGAReport(object):
 
         self.activity_stats = collections.defaultdict(list)
 
-    def loadTripinfo(self):
+    def load_tripinfo(self):
+        """ Load the Tripinfo file """
         # just in case..
         self.tripinfo = collections.defaultdict(dict)
         self.personinfo = collections.defaultdict(dict)
@@ -66,11 +59,11 @@ class SAGAReport(object):
             parser = etree.XMLParser(schema=schema)
             tree = etree.parse(self.tripinfo_file, parser)
         except etree.XMLSyntaxError as excp:
-            logging.warning('Unable to use %s schema due to exception %s.', 
-                            self.TRIPINFO_SCHEMA, pformat(excp))
+            print('Unable to use {} schema due to exception {}.'.format(
+                self.TRIPINFO_SCHEMA, pformat(excp)))
             tree = etree.parse(self.tripinfo_file)
 
-        logging.info('Loading %s tripinfo file.', self.tripinfo_file)
+        print('Loading {} tripinfo file.'.format(self.tripinfo_file))
         for element in tree.getroot():
             if element.tag == 'tripinfo':
                 self.tripinfo[element.attrib['id']] = dict(element.attrib)
@@ -82,22 +75,24 @@ class SAGAReport(object):
                 self.personinfo[element.attrib['id']]['stages'] = stages
             else:
                 raise Exception('Unrecognized element in the tripinfo file.')
-        logging.debug('TRIPINFO: \n%s', pformat(self.tripinfo))
-        logging.debug('PERSONINFO: \n%s', pformat(self.personinfo))
+        # print('TRIPINFO: \n{}'.format(self.tripinfo))
+        # print('PERSONINFO: \n{}'.format(self.personinfo))
 
-    def processTripinfo(self):
-        logging.info('Processing %s tripinfo file.', self.tripinfo_file)
+    def process_tripinfo(self):
+        """ Process the Tripinfo file """
+        print('Processing {} tripinfo file.'.format(self.tripinfo_file))
         for person, data in self.personinfo.items():
             for tag, stage in data['stages']:
-                logging.debug('[%s] %s \n%s', person, tag, pformat(stage))
+                # print('[{}] {} \n{}'.format(person, tag, pformat(stage)))
                 if tag == 'stop':
                     self.activity_stats[stage['actType']].append({
                         'arrival': stage['arrival'],
                         'duration': stage['duration'],
                     })
 
-    def computeStats(self):
-        logging.info('Computing statistics..')
+    def compute_stats(self):
+        """ Computing Stats from the Tripinfo file """
+        print('Computing statistics..')
         stats = dict()
         for activity, data in self.activity_stats.items():
             duration = list()
@@ -121,9 +116,9 @@ class SAGAReport(object):
                     'std': np.std(start),
                 }
             }
-            logging.info('[%s] \n%s', activity, pformat(stats[activity]))
+            print('[{}] \n{}'.format(activity, pformat(stats[activity])))
 
-        logging.info('Saving statistics to %s file.', self.output_file)
+        print('Saving statistics to {} file.'.format(self.output_file))
         with open(self.output_file, 'w') as output:
             json.dump(stats, output)
 
@@ -131,14 +126,13 @@ def main(cmd_args):
     """ SAGA Activities Report """
 
     args = get_options(cmd_args)
-    logging.debug('%s', args)
+    print(args)
 
     report = SAGAReport(args)
-    report.loadTripinfo()
-    report.processTripinfo()
-    report.computeStats()
-    logging.info('Done.')
+    report.load_tripinfo()
+    report.process_tripinfo()
+    report.compute_stats()
+    print('Done.')
 
 if __name__ == '__main__':
-    logs()
     main(sys.argv[1:])

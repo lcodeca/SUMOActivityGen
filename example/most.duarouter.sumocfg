@@ -25,28 +25,55 @@
     </time>
 
     <processing>
-        <ignore-route-errors value="true"/>
-        <lateral-resolution value="0.3"/>
-        <ignore-junction-blocker value="60"/>
         <collision.action value="teleport"/>
-        <time-to-teleport value="300"/>
+        <ignore-junction-blocker value="60"/>
+        <ignore-route-errors value="true"/>
+        <lateral-resolution value="0.8"/>
         <max-depart-delay value="900"/>
         <time-to-impatience value="120"/>
+        <time-to-teleport value="300"/>
+
+        <parking.maneuver value="true"/>
+
         <pedestrian.model value="striping"/>
-        <pedestrian.striping.stripe-width value="0.55"/>
+        <pedestrian.striping.dawdling value="0.2"/>
         <pedestrian.striping.jamtime value="60"/>
+        <pedestrian.striping.jamtime.crossing value="10"/>
+        <pedestrian.striping.reserve-oncoming value="0.25"/>
+        <pedestrian.striping.reserve-oncoming.junctions value="0.34"/>
+        <pedestrian.striping.stripe-width value="0.55"/>
+
+        <ride.stop-tolerance value="25"/>
     </processing>
 
     <routing>
-        <persontrip.transfer.car-walk value="parkingAreas,ptStops"/>
         <device.rerouting.probability value="1"/>
         <device.rerouting.period value="300"/>
         <device.rerouting.pre-period value="300"/>
-        <device.rerouting.threads value="4"/>
+        <device.rerouting.bike-speeds value="true"/>
+
+        <person-device.rerouting.probability value="1"/>
+        <person-device.rerouting.period value="300"/>
+
+        <persontrip.walkfactor value="0.75"/>
+        <persontrip.taxi.waiting-time value="300"/>
+        <persontrip.transfer.car-walk value="parkingAreas,ptStops,allJunctions"/>
+        <persontrip.transfer.taxi-walk value="parkingAreas,ptStops,allJunctions"/>
+        <persontrip.transfer.walk-taxi value="parkingAreas,ptStops,allJunctions"/>
     </routing>
+
+    <taxi_device>
+        <device.taxi.dispatch-algorithm value="greedy"/>
+        <device.taxi.dispatch-period value="60"/>
+        <device.taxi.idle-algorithm value="randomCircling"/>
+    </taxi_device>
 
     <report>
         <verbose value="false"/>
+        <no-step-log value="true"/>
+        <duration-log.statistics value="false"/>
+        <duration-log.disable value="true"/>
+        <no-warnings value="true"/>
     </report>
 
     <random_number>

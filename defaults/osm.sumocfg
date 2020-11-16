@@ -15,7 +15,7 @@
     <input>
         <net-file value="osm.net.xml"/>
         <route-files value=""/>
-        <additional-files value="osm_polygons.add.xml,osm_stops.add.xml,osm_complete_parking_areas.add.xml,osm_parking_rerouters.add.xml,basic.vType.xml"/>
+        <additional-files value="osm_polygons.add.xml,basic.vType.xml,osm_stops.add.xml,osm_complete_parking_areas.add.xml,osm_parking_rerouters.add.xml,osm_taxi_stands.add.xml,osm_taxi_rerouters.add.xml"/>
     </input>
 
     <time>
@@ -27,35 +27,69 @@
     <output>
         <output-prefix value='output.'/>
         <summary-output value="summary.xml"/>
+        <person-summary-output value="person.summary.xml"/>
         <tripinfo-output value="tripinfo.xml"/>
         <tripinfo-output.write-unfinished value="false"/>
+        <statistic-output value="statistics.xml"/>
     </output>
 
     <processing>
+        <collision.action value="teleport"/>
+        <ignore-junction-blocker value="60"/>
         <ignore-route-errors value="true"/>
         <lateral-resolution value="0.8"/>
-        <ignore-junction-blocker value="60"/>
-        <collision.action value="teleport"/>
-        <time-to-teleport value="300"/>
         <max-depart-delay value="900"/>
         <time-to-impatience value="120"/>
+        <time-to-teleport value="300"/>
+
+        <parking.maneuver value="true"/>
+
         <pedestrian.model value="striping"/>
-        <pedestrian.striping.stripe-width value="0.55"/>
+        <pedestrian.striping.dawdling value="0.2"/>
         <pedestrian.striping.jamtime value="60"/>
+        <pedestrian.striping.jamtime.crossing value="10"/>
+        <pedestrian.striping.reserve-oncoming value="0.25"/>
+        <pedestrian.striping.reserve-oncoming.junctions value="0.34"/>
+        <pedestrian.striping.stripe-width value="0.55"/>
+
+        <ride.stop-tolerance value="25"/>
+
     </processing>
 
     <routing>
-        <persontrip.transfer.car-walk value="parkingAreas,ptStops,allJunctions"/>
         <device.rerouting.probability value="1"/>
         <device.rerouting.period value="300"/>
         <device.rerouting.pre-period value="300"/>
+        <device.rerouting.bike-speeds value="true"/>
+
         <person-device.rerouting.probability value="1"/>
         <person-device.rerouting.period value="300"/>
+
+        <persontrip.walkfactor value="0.75"/>
+        <persontrip.taxi.waiting-time value="300"/>
+        <persontrip.transfer.car-walk value="parkingAreas,ptStops,allJunctions"/>
+        <persontrip.transfer.taxi-walk value="parkingAreas,ptStops,allJunctions"/>
+        <persontrip.transfer.walk-taxi value="parkingAreas,ptStops,allJunctions"/>
     </routing>
+
+    <taxi_device>
+        <!-- The dispatch algorithm [greedy|greedyClosest|greedyShared|routeExtension|traci] -->
+        <device.taxi.dispatch-algorithm value="greedy"/>
+        <!-- Write information from the dispatch algorithm to FILE -->
+        <device.taxi.dispatch-algorithm.output value="taxi.dispatch.xml"/>
+        <!-- Load dispatch algorithm parameters in format KEY1:VALUE1[,KEY2:VALUE] -->
+        <device.taxi.dispatch-algorithm.params value=""/>
+        <!-- The period between successive calls to the dispatcher -->
+        <device.taxi.dispatch-period value="60"/>
+        <!-- The behavior of idle taxis [stop|randomCircling] -->
+        <device.taxi.idle-algorithm value="stop"/>
+        <!-- Write information from the idling algorithm to FILE -->
+        <device.taxi.idle-algorithm.output value="taxi.idle.xml"/>
+    </taxi_device>
 
     <report>
         <verbose value="true"/>
-        <no-step-log value="true"/>
+        <no-step-log value="false"/>
         <duration-log.statistics value="true"/>
         <duration-log.disable value="false"/>
         <no-warnings value="false"/>
@@ -64,5 +98,9 @@
     <random_number>
         <seed value="42"/>
     </random_number>
+
+    <gui_only>
+        <gui-settings-file value="default-gui.xml"/>
+    </gui_only>
 
 </configuration>

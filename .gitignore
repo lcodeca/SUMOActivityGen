@@ -2,8 +2,8 @@
 misc
 
 # Testing
+test/*
 example/*
-Test_*
 
 #Other
 .DS_Store
