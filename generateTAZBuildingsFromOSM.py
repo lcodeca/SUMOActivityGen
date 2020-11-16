@@ -105,17 +105,17 @@ class GenerateTAZandWeightsFromOSM():
 
     def save_sumo_taz(self, filename):
         """ Save TAZ to file. """
-        print("Creation of %s", filename)
+        print("Creation of {}".format(filename))
         self._write_taz_file(filename)
 
     def save_taz_weigth(self, filename):
         """ Save weigths to file."""
-        print("Creation of %s", filename)
+        print("Creation of {}".format(filename))
         self._write_csv_file(filename)
 
     def save_buildings_weigth(self, filename):
         """ Save building weights to file."""
-        print("Creation of %s", filename)
+        print("Creation of {}".format(filename))
         self._write_poly_files(filename)
 
     def save_taz_to_osm(self, filename):
