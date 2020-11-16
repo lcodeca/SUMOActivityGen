@@ -4,7 +4,7 @@
     <param key="has.rerouting.device" value="false"/>
   </vType>
     <vType vClass="rail_urban" id="metro" personCapacity="100" color="blue">
-    <param key="has.rerouting.device" value="true"/>
+    <param key="has.rerouting.device" value="false"/>
   </vType>
   <vType vClass="rail" id="train"       personCapacity="500" color="blue">
     <param key="has.rerouting.device" value="false"/>
