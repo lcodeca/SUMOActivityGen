@@ -5,6 +5,7 @@ Activity-based Mobility Generation for SUMO Simulator
 Contacts: Lara CODECA [lara.codeca@gmail.com]
 
 Cite: [_L. CODECA, J. ERDMANN, V. CAHILL, J. HAERRI, "SAGA: An Activity-based Multi-modal Mobility Scenario Generator for SUMO". SUMO User Conference 2020 - From Traffic Flow to Mobility Modeling._](https://www.researchgate.net/publication/346485853_SAGA_An_Activity-based_Multi-modal_Mobility_Scenario_Generator_for_SUMO)
+The [presentation](https://www.youtube.com/watch?v=b-ZvQ0XbVvM) is available on YouTube.
 
 This program and the accompanying materials are made available under the
 terms of the Eclipse Public License 2.0 which is available at <http://www.eclipse.org/legal/epl-2.0>.
