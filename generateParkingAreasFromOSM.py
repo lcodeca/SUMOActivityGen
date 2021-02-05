@@ -181,7 +181,12 @@ class ParkingAreasFromOSMGenerator():
         """ Retrieve parking lot capacity from OSM. """
         for tag in self._osm_parkings[parking_id]['tag']:
             if tag['k'] == 'capacity':
-                return int(tag['v'])
+                try:
+                    return int(tag['v'])
+                except ValueError:
+                    print("Parking {} capacity is not an integer [{}].".format(
+                        parking_id, tag['v']))
+                    return self._options.default_capacity
         print("Parking {} has no capacity tag.".format(parking_id))
         return self._options.default_capacity
 
