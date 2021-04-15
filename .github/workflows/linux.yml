@@ -52,4 +52,4 @@ jobs:
         sudo pip3 install --no-cache-dir -r requirements.txt
         gunzip tests/*.gz
         export SUMO_HOME=/usr/share/sumo
-        ./scenarioFromOSM.py --osm tests/wildau_osm.xml --out tests/out
+        ./scenarioFromOSM.py --osm tests/wildau_osm.xml --out tests/out --local-defaults
