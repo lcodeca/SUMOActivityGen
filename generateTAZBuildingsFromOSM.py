@@ -53,6 +53,9 @@ def get_options(cmd_args=None):
     parser.add_argument('--admin-level', type=int, dest='admin_level', default=None,
                         help='Select only the administrative boundaries with the given level '
                         'and generate the associated TAZs.')
+    parser.add_argument('--max-entrance-dist', type=float, dest='max_entrance', default=1000.0,
+                        help='Maximum search radious to find building eetrances in edges that '
+                        'are in other TAZs. [Default: 1000.0 meters]')
     parser.add_argument('--taz-plot', type=str, dest='html_filename', default='',
                         help='Plots the TAZs to an HTML file as OSM overlay. (Requires folium)')
     parser.add_argument('--processes', type=int, dest='processes', default=1,
@@ -361,6 +364,7 @@ class GenerateTAZandWeightsFromOSM():
                     'all_in_one': self._param.single_taz,
                     'taz': self._taz,
                     'net_file': self._param.net_file,
+                    'max_entrance_dist': self._param.max_entrance,
                 }
                 list_parameters.append(parameters)
             print('Buildings to TAZ multiprocessing...')
@@ -396,33 +400,61 @@ class GenerateTAZandWeightsFromOSM():
 
             pedestrian_edge_info = None
             pedestrian_dist_edge = sys.float_info.max
-
             generic_edge_info = None
             generic_dist_edge = sys.float_info.max
 
+            pedestrian_edge_info_oth_taz = None
+            pedestrian_dist_edge_oth_taz = sys.float_info.max
+            generic_edge_info_oth_taz = None
+            generic_dist_edge_oth_taz = sys.float_info.max
+
             radius = 50.0
-            while not pedestrian_edge_info or not generic_edge_info:
+            while pedestrian_edge_info is None or generic_edge_info is None:
+                if radius > parameters['max_entrance_dist']:
+                    # it was not possible to find two edges in the same TAZ
+                    # we are going to use the closest whatever-edge we can find.
+                    if pedestrian_edge_info is None and pedestrian_edge_info_oth_taz is not None:
+                        pedestrian_edge_info = pedestrian_edge_info_oth_taz
+                        pedestrian_dist_edge = pedestrian_dist_edge_oth_taz
+                        print(
+                            'Warning: pedestrian edge {} is outside the TAZ. [Search radius: {}m]'
+                            .format(pedestrian_edge_info.getID(), radius))
+                    if generic_edge_info is None and generic_edge_info_oth_taz is not None:
+                        generic_edge_info = generic_edge_info_oth_taz
+                        generic_dist_edge = generic_dist_edge_oth_taz
+                        print(
+                            'Warning: passenger edge {} is outside the TAZ. [Search radius: {}m]'
+                            .format(generic_edge_info.getID(), radius))
+
                 neighbours = sumo_net.getNeighboringEdges(x_coord, y_coord, r=radius)
                 for edge, _ in neighbours:
-                    if edge.getID() not in parameters['taz'][id_taz]['edges']:
-                        continue
                     if edge.allows('rail'):
                         continue
                     _, _, dist = edge.getClosestLanePosDist(centroid)
-                    if edge.allows('passenger') and dist < generic_dist_edge:
-                        generic_edge_info = edge
-                        generic_dist_edge = dist
-                    if edge.allows('pedestrian') and dist < pedestrian_dist_edge:
-                        pedestrian_edge_info = edge
-                        pedestrian_dist_edge = dist
+                    if edge.getID() not in parameters['taz'][id_taz]['edges']:
+                        # OTHER TAZ
+                        if edge.allows('passenger') and dist < generic_dist_edge_oth_taz:
+                            generic_edge_info_oth_taz = edge
+                            generic_dist_edge_oth_taz = dist
+                        if edge.allows('pedestrian') and dist < pedestrian_dist_edge_oth_taz:
+                            pedestrian_edge_info_oth_taz = edge
+                            pedestrian_dist_edge_oth_taz = dist
+                    else:
+                        # SAME TAZ
+                        if edge.allows('passenger') and dist < generic_dist_edge:
+                            generic_edge_info = edge
+                            generic_dist_edge = dist
+                        if edge.allows('pedestrian') and dist < pedestrian_dist_edge:
+                            pedestrian_edge_info = edge
+                            pedestrian_dist_edge = dist
                 radius += 50.0
 
             if generic_edge_info and generic_dist_edge > 500.0:
-                print(
-                    "A building entrance [passenger] is {} meters away.".format(generic_dist_edge))
+                print("A building entrance {} [passenger] is {} meters away.".format(
+                    generic_edge_info.getID(), generic_dist_edge))
             if pedestrian_edge_info and pedestrian_dist_edge > 500.0:
-                print("A building entrance [pedestrian] is {} meters away.".format(
-                    pedestrian_dist_edge))
+                print("A building entrance {} [pedestrian] is {} meters away.".format(
+                    pedestrian_edge_info.getID(), pedestrian_dist_edge))
 
             return generic_edge_info, pedestrian_edge_info
 

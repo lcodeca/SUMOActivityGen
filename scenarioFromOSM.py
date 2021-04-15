@@ -69,6 +69,10 @@ def get_options(cmd_args=None):
         help='Select only the administrative boundaries with the given level and generate'
         ' the associated TAZs.')
     parser.add_argument(
+        '--max-entrance-dist', type=float, dest='max_entrance', default=1000.0,
+        help='Maximum search radious to find building eetrances in edges that are '
+        'in other TAZs. [Default: 1000.0 meters]')
+    parser.add_argument(
         '--taz-plot', type=str, dest='html_filename', default='',
         help='Plots the TAZs to an HTML file as OSM overlay. (Requires folium)')
     parser.add_argument(
@@ -265,7 +269,8 @@ def _call_generate_parking_area_rerouters_for_stands(processes):
                          '-o', DEFAULT_TAXI_STANDS_REROUTERS_XML, '--tqdm']
     generateParkingAreaRerouters.main(rerouters_options)
 
-def _call_generate_taz_buildings_from_osm(filename, single_taz, processes, admin_level, plot):
+def _call_generate_taz_buildings_from_osm(
+    filename, single_taz, processes, admin_level, max_entrance, plot):
     """ Call directly generateTAZBuildingsFromOSM from SUMOActivityGen. """
     taz_buildings_options = ['--osm', filename,
                              '--net', DEFAULT_NET_XML,
@@ -278,6 +283,9 @@ def _call_generate_taz_buildings_from_osm(filename, single_taz, processes, admin
     if admin_level:
         taz_buildings_options.append('--admin-level')
         taz_buildings_options.append(str(admin_level))
+    if max_entrance:
+        taz_buildings_options.append('--max-entrance-dist')
+        taz_buildings_options.append(str(max_entrance))
     if plot:
         taz_buildings_options.append('--taz-plot')
         taz_buildings_options.append(plot)
@@ -426,8 +434,9 @@ def main(cmd_args):
         print('Generate TAZ from administrative boundaries, TAZ weights using buildings and '
               'PoIs and the buildings infrastructure.')
         os.makedirs('buildings', exist_ok=True)
-        _call_generate_taz_buildings_from_osm(args.osm_file, args.single_taz, args.processes,
-                                              args.admin_level, args.html_filename)
+        _call_generate_taz_buildings_from_osm(
+            args.osm_file, args.single_taz, args.processes, args.admin_level,
+            args.max_entrance, args.html_filename)
 
     if args.from_step <= 8 and args.to_step >= 8:
         print('Generate the default OD-Matrix in Amitran format. ')
