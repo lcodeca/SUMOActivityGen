@@ -503,28 +503,19 @@ class GenerateTAZandWeightsFromOSM():
                             associations[id_taz]['buildings_cumul_area'] += area
         return associations
 
-    _TAZS = """
-<tazs> {list_of_tazs}
-</tazs>
+    _TAZ = """    <!-- id="{taz_id}" name="{taz_name}" -->
+    <taz id="{taz_id}" edges="{list_of_edges}"/>
 """
-
-    _TAZ = """
-    <!-- id="{taz_id}" name="{taz_name}" -->
-    <taz id="{taz_id}" edges="{list_of_edges}"/>"""
 
     def _write_taz_file(self, filename):
         """ Write the SUMO file. """
-        with open(filename, 'w') as outfile:
-            string_of_tazs = ''
+        with open(filename, 'w', encoding='utf8') as outfile:
+            sumolib.xml.writeHeader(outfile, root="tazs", schemaPath="taz_file.xsd")
             for value in self._taz.values():
-                string_of_edges = ''
-                for edge in value['edges']:
-                    string_of_edges += str(edge) + ' '
-                string_of_edges = string_of_edges.strip()
-                string_of_tazs += self._TAZ.format(
+                outfile.write(self._TAZ.format(
                     taz_id=value['ref'], taz_name=value['name'], #.encode('utf-8'),
-                    list_of_edges=string_of_edges)
-            outfile.write(self._TAZS.format(list_of_tazs=string_of_tazs))
+                    list_of_edges=' '.join(value['edges'])))
+            outfile.write('</tazs>\n')
 
     def _write_poly_files(self, prefix):
         """ Write the CSV file. """
