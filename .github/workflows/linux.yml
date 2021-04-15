@@ -1,15 +1,15 @@
 name: linux
 
-on: 
+on:
   push:            # run on push events
-    paths-ignore:  # but ignore everything in the docs subfolder 
+    paths-ignore:  # but ignore everything in the docs subfolder
       - 'docs/**'
     branches:
       - '**'
     tags:
       - '*'
   pull_request:    # run on pull requests
-    paths-ignore:  # but ignore everything in the docs subfolder 
+    paths-ignore:  # but ignore everything in the docs subfolder
       - 'docs/**'
   schedule:
     - cron:  '5 1 * * *'
@@ -50,8 +50,8 @@ jobs:
     - name: Building SUMO
       if: matrix.build_type == 'head'
       run: |
-        mkdir -p sumo/cmake-build 
-        cd sumo/cmake-build 
+        mkdir -p sumo/cmake-build
+        cd sumo/cmake-build
         cmake ..
         make -j4
         sudo make install
@@ -63,9 +63,18 @@ jobs:
         sudo apt-get update
         sudo apt-get install sumo sumo-tools
 
-    - name: Running Tests
+    - name: Running Release Tests
+      if: matrix.build_type == 'release'
       run: |
         sudo pip3 install --no-cache-dir -r requirements.txt
         gunzip tests/*.gz
         export SUMO_HOME=/usr/share/sumo
+        ./scenarioFromOSM.py --osm tests/wildau_osm.xml --out tests/out --local-defaults
+
+    - name: Running Head Tests
+      if: matrix.build_type == 'head'
+      run: |
+        sudo pip3 install --no-cache-dir -r requirements.txt
+        gunzip tests/*.gz
+        export SUMO_HOME=/usr/local/share/sumo
         ./scenarioFromOSM.py --osm tests/wildau_osm.xml --out tests/out --local-defaults
