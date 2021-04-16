@@ -1,4 +1,4 @@
-name: linux
+name: linux-release
 
 on:
   push:            # run on push events
@@ -39,8 +39,15 @@ jobs:
         export SUMO_HOME='/usr/share/sumo'
         export SINGLETAZ='--single-taz'
         export TAZLVL9='--admin-level 9'
-        export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100'
+        export COMMON='--local-defaults --processes 2 --population 1000 --taxi-fleet 100'
         ./scenarioFromOSM.py --osm tests/wildau_osm.xml --out tests/wildau $COMMON $SINGLETAZ
+
+    - name: Upload Wildau Test
+      uses: actions/upload-artifact@v1
+      with:
+          name: Wildau
+          path: |
+            tests/wildau
 
   DLR:
     runs-on: ubuntu-latest
@@ -68,7 +75,7 @@ jobs:
         export SUMO_HOME='/usr/share/sumo'
         export SINGLETAZ='--single-taz'
         export TAZLVL9='--admin-level 9'
-        export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100'
+        export COMMON='--local-defaults --processes 2 --population 1000 --taxi-fleet 100'
         ./scenarioFromOSM.py --osm tests/dlr_osm.xml --out tests/dlr $COMMON $SINGLETAZ
 
   Docklands:
@@ -97,7 +104,7 @@ jobs:
         export SUMO_HOME='/usr/share/sumo'
         export SINGLETAZ='--single-taz'
         export TAZLVL9='--admin-level 9'
-        export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100'
+        export COMMON='--local-defaults --processes 2 --population 1000 --taxi-fleet 100'
         ./scenarioFromOSM.py --osm tests/docklands_osm.xml --out tests/docklands --lefthand $COMMON $TAZLVL9
 
   Sophia:
@@ -126,7 +133,7 @@ jobs:
         export SUMO_HOME='/usr/share/sumo'
         export SINGLETAZ='--single-taz'
         export TAZLVL9='--admin-level 9'
-        export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100'
+        export COMMON='--local-defaults --processes 2 --population 1000 --taxi-fleet 100'
         ./scenarioFromOSM.py --osm tests/sophia_osm.xml --out tests/sophia $COMMON $TAZLVL9
 
   Riyadh:
@@ -155,7 +162,7 @@ jobs:
         export SUMO_HOME='/usr/share/sumo'
         export SINGLETAZ='--single-taz'
         export TAZLVL9='--admin-level 9'
-        export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100'
+        export COMMON='--local-defaults --processes 2 --population 1000 --taxi-fleet 100'
         ./scenarioFromOSM.py --osm tests/riyadh_osm.xml --out tests/riyadh $COMMON $TAZLVL9
 
   Kyoto:
@@ -184,5 +191,5 @@ jobs:
         export SUMO_HOME='/usr/share/sumo'
         export SINGLETAZ='--single-taz'
         export TAZLVL9='--admin-level 9'
-        export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100'
+        export COMMON='--local-defaults --processes 2 --population 1000 --taxi-fleet 100'
         ./scenarioFromOSM.py --osm tests/kyoto_osm.xml --out tests/kyoto --lefthand $COMMON $TAZLVL9
