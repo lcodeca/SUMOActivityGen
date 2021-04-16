@@ -11,11 +11,9 @@ on:
   pull_request:    # run on pull requests
     paths-ignore:  # but ignore everything in the docs subfolder
       - 'docs/**'
-  schedule:
-    - cron:  '5 1 * * SUN'
 
 jobs:
-  setup:
+  Wildau:
     runs-on: ubuntu-latest
 
     steps:
@@ -36,11 +34,6 @@ jobs:
       run: |
         gunzip tests/*.gz
 
-  Wildau:
-    runs-on: ubuntu-latest
-    needs: setup
-
-    steps:
     - name: Running Wildau Test
       run: |
         export SUMO_HOME='/usr/share/sumo'
@@ -51,9 +44,25 @@ jobs:
 
   DLR:
     runs-on: ubuntu-latest
-    needs: setup
 
     steps:
+    - name: Cloning SAGA
+      uses: actions/checkout@v2
+
+    - name: Installing SUMO
+      run: |
+        sudo add-apt-repository ppa:sumo/stable
+        sudo apt-get update
+        sudo apt-get install sumo sumo-tools
+
+    - name: Installing SAGA Requirements
+      run: |
+        sudo pip3 install --no-cache-dir -r requirements.txt
+
+    - name: Preparing Tests
+      run: |
+        gunzip tests/*.gz
+
     - name: Running DLR Test
       run: |
         export SUMO_HOME='/usr/share/sumo'
@@ -64,9 +73,25 @@ jobs:
 
   Docklands:
     runs-on: ubuntu-latest
-    needs: setup
 
     steps:
+    - name: Cloning SAGA
+      uses: actions/checkout@v2
+
+    - name: Installing SUMO
+      run: |
+        sudo add-apt-repository ppa:sumo/stable
+        sudo apt-get update
+        sudo apt-get install sumo sumo-tools
+
+    - name: Installing SAGA Requirements
+      run: |
+        sudo pip3 install --no-cache-dir -r requirements.txt
+
+    - name: Preparing Tests
+      run: |
+        gunzip tests/*.gz
+
     - name: Running Docklands Test
       run: |
         export SUMO_HOME='/usr/share/sumo'
@@ -77,9 +102,25 @@ jobs:
 
   Sophia:
     runs-on: ubuntu-latest
-    needs: setup
 
     steps:
+    - name: Cloning SAGA
+      uses: actions/checkout@v2
+
+    - name: Installing SUMO
+      run: |
+        sudo add-apt-repository ppa:sumo/stable
+        sudo apt-get update
+        sudo apt-get install sumo sumo-tools
+
+    - name: Installing SAGA Requirements
+      run: |
+        sudo pip3 install --no-cache-dir -r requirements.txt
+
+    - name: Preparing Tests
+      run: |
+        gunzip tests/*.gz
+
     - name: Running Sophia Antipolis Test
       run: |
         export SUMO_HOME='/usr/share/sumo'
@@ -90,9 +131,25 @@ jobs:
 
   Riyadh:
     runs-on: ubuntu-latest
-    needs: setup
 
     steps:
+    - name: Cloning SAGA
+      uses: actions/checkout@v2
+
+    - name: Installing SUMO
+      run: |
+        sudo add-apt-repository ppa:sumo/stable
+        sudo apt-get update
+        sudo apt-get install sumo sumo-tools
+
+    - name: Installing SAGA Requirements
+      run: |
+        sudo pip3 install --no-cache-dir -r requirements.txt
+
+    - name: Preparing Tests
+      run: |
+        gunzip tests/*.gz
+
     - name: Running Riyadh Test
       run: |
         export SUMO_HOME='/usr/share/sumo'
@@ -103,9 +160,25 @@ jobs:
 
   Kyoto:
     runs-on: ubuntu-latest
-    needs: setup
 
     steps:
+    - name: Cloning SAGA
+      uses: actions/checkout@v2
+
+    - name: Installing SUMO
+      run: |
+        sudo add-apt-repository ppa:sumo/stable
+        sudo apt-get update
+        sudo apt-get install sumo sumo-tools
+
+    - name: Installing SAGA Requirements
+      run: |
+        sudo pip3 install --no-cache-dir -r requirements.txt
+
+    - name: Preparing Tests
+      run: |
+        gunzip tests/*.gz
+
     - name: Running Kyoto Test
       run: |
         export SUMO_HOME='/usr/share/sumo'
