@@ -12,50 +12,20 @@ on:
     paths-ignore:  # but ignore everything in the docs subfolder
       - 'docs/**'
   schedule:
-    - cron:  '5 1 * * *'
+    - cron:  '5 1 * * SUN'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       # Allow all other matrix-jobs to continue running, even if one of the jobs fails
-#      fail-fast: false
+      # fail-fast: false
       matrix:
-        build_type: [release, head]
+        build_type: [release]
 
     steps:
     - name: Cloning SAGA
       uses: actions/checkout@v2
-
-    - name: Cloning SUMO
-      if: matrix.build_type == 'head'
-      uses: actions/checkout@v2
-      with:
-        repository: eclipse/sumo
-        path: sumo
-        fetch-depth: 0
-
-    - name: Fetching SUMO tags
-      if: matrix.build_type == 'head'
-      run: |
-        cd sumo
-        git fetch --tags --force
-
-    - name: Preparing Build System
-      if: matrix.build_type == 'head'
-      run: |
-        sudo apt-get update
-        sudo apt-get install cmake libeigen3-dev libxerces-c-dev libfox-1.6-dev libgdal-dev libproj-dev libgtest-dev libgoogle-perftools-dev libgl2ps-dev python3-dev python3-setuptools swig openjdk-8-jdk maven ccache
-
-    - name: Building SUMO
-      if: matrix.build_type == 'head'
-      run: |
-        mkdir -p sumo/cmake-build
-        cd sumo/cmake-build
-        cmake ..
-        make -j4
-        sudo make install
-        echo "export SUMO_HOME='/usr/local/share/sumo'" >> ~/.bashrc
 
     - name: Installing SUMO
       if: matrix.build_type == 'release'
@@ -63,7 +33,6 @@ jobs:
         sudo add-apt-repository ppa:sumo/stable
         sudo apt-get update
         sudo apt-get install sumo sumo-tools
-        echo "export SUMO_HOME='/usr/share/sumo'" >> ~/.bashrc
 
     - name: Installing SAGA Requirements
       run: |
@@ -72,36 +41,51 @@ jobs:
     - name: Preparing Tests
       run: |
         gunzip tests/*.gz
-        echo "export SINGLETAZ='--single-taz'" >> ~/.bashrc
-        echo "export TAZLVL9='--admin-level 9'" >> ~/.bashrc
-        echo "export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100'" >> ~/.bashrc
 
     - name: Running Wildau Test
       run: |
-        source ~/.bashrc
+        export SUMO_HOME='/usr/share/sumo'
+        export SINGLETAZ='--single-taz'
+        export TAZLVL9='--admin-level 9'
+        export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100'
         ./scenarioFromOSM.py --osm tests/wildau_osm.xml --out tests/wildau $COMMON $SINGLETAZ
 
     - name: Running DLR Test
       run: |
-        source ~/.bashrc
+        export SUMO_HOME='/usr/share/sumo'
+        export SINGLETAZ='--single-taz'
+        export TAZLVL9='--admin-level 9'
+        export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100'
         ./scenarioFromOSM.py --osm tests/dlr_osm.xml --out tests/dlr $COMMON $SINGLETAZ
 
     - name: Running Docklands Test
       run: |
-        source ~/.bashrc
+        export SUMO_HOME='/usr/share/sumo'
+        export SINGLETAZ='--single-taz'
+        export TAZLVL9='--admin-level 9'
+        export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100'
         ./scenarioFromOSM.py --osm tests/docklands_osm.xml --out tests/docklands --lefthand $COMMON $TAZLVL9
 
     - name: Running Sophia Antipolis Test
       run: |
-        source ~/.bashrc
+        export SUMO_HOME='/usr/share/sumo'
+        export SINGLETAZ='--single-taz'
+        export TAZLVL9='--admin-level 9'
+        export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100'
         ./scenarioFromOSM.py --osm tests/sophia_osm.xml --out tests/sophia $COMMON $TAZLVL9
 
     - name: Running Riyadh Test
       run: |
-        source ~/.bashrc
+        export SUMO_HOME='/usr/share/sumo'
+        export SINGLETAZ='--single-taz'
+        export TAZLVL9='--admin-level 9'
+        export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100'
         ./scenarioFromOSM.py --osm tests/riyadh_osm.xml --out tests/riyadh $COMMON $TAZLVL9
 
     - name: Running Kyoto Test
       run: |
-        source ~/.bashrc
+        export SUMO_HOME='/usr/share/sumo'
+        export SINGLETAZ='--single-taz'
+        export TAZLVL9='--admin-level 9'
+        export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100'
         ./scenarioFromOSM.py --osm tests/kyoto_osm.xml --out tests/kyoto --lefthand $COMMON $TAZLVL9
