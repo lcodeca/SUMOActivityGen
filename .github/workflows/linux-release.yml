@@ -43,11 +43,12 @@ jobs:
         ./scenarioFromOSM.py --osm tests/wildau_osm.xml --out tests/wildau $COMMON $SINGLETAZ
 
     - name: Upload Wildau Test
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v2
       with:
           name: Wildau
           path: |
             tests/wildau
+          retention-days: 7
 
   DLR:
     runs-on: ubuntu-latest
@@ -77,6 +78,14 @@ jobs:
         export TAZLVL9='--admin-level 9'
         export COMMON='--local-defaults --processes 2 --population 1000 --taxi-fleet 100'
         ./scenarioFromOSM.py --osm tests/dlr_osm.xml --out tests/dlr $COMMON $SINGLETAZ
+
+    - name: Upload DLR Test
+      uses: actions/upload-artifact@v2
+      with:
+          name: DLR
+          path: |
+            tests/dlr
+          retention-days: 7
 
   Docklands:
     runs-on: ubuntu-latest
