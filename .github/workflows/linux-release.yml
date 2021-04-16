@@ -48,6 +48,7 @@ jobs:
         export SINGLETAZ='--single-taz'
         export TAZLVL9='--admin-level 9'
         export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100'
+        sumo --version
         ./scenarioFromOSM.py --osm tests/wildau_osm.xml --out tests/wildau $COMMON $SINGLETAZ
 
     - name: Running DLR Test
