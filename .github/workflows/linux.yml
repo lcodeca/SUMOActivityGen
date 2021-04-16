@@ -55,6 +55,7 @@ jobs:
         cmake ..
         make -j4
         sudo make install
+        export SUMO_HOME=/usr/local/share/sumo
 
     - name: Installing SUMO
       if: matrix.build_type == 'release'
@@ -62,19 +63,40 @@ jobs:
         sudo add-apt-repository ppa:sumo/stable
         sudo apt-get update
         sudo apt-get install sumo sumo-tools
-
-    - name: Running Release Tests
-      if: matrix.build_type == 'release'
-      run: |
-        sudo pip3 install --no-cache-dir -r requirements.txt
-        gunzip tests/*.gz
         export SUMO_HOME=/usr/share/sumo
-        ./scenarioFromOSM.py --osm tests/wildau_osm.xml --out tests/out --local-defaults
 
-    - name: Running Head Tests
-      if: matrix.build_type == 'head'
+    - name: Installing SAGA Requirements
       run: |
         sudo pip3 install --no-cache-dir -r requirements.txt
+
+    - name: Preparing Tests
+      run: |
         gunzip tests/*.gz
-        export SUMO_HOME=/usr/local/share/sumo
-        ./scenarioFromOSM.py --osm tests/wildau_osm.xml --out tests/out --local-defaults
+        export SINGLETAZ='--single-taz'
+        export TAZLVL9='--admin-level 9'
+        export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100'
+
+
+    - name: Running Wildau Test
+      run: |
+        ./scenarioFromOSM.py --osm tests/wildau_osm.xml --out tests/wildau $COMMON $SINGLETAZ
+
+    - name: Running DLR Test
+      run: |
+        ./scenarioFromOSM.py --osm tests/dlr_osm.xml --out tests/dlr $COMMON $SINGLETAZ
+
+    - name: Running Docklands Test
+      run: |
+        ./scenarioFromOSM.py --osm tests/docklands_osm.xml --out tests/docklands --lefthand $COMMON $TAZLVL9
+
+    - name: Running Sophia Antipolis Test
+      run: |
+        ./scenarioFromOSM.py --osm tests/sophia_osm.xml --out tests/sophia $COMMON $TAZLVL9
+
+    - name: Running Riyadh Test
+      run: |
+        ./scenarioFromOSM.py --osm tests/riyadh_osm.xml --out tests/riyadh $COMMON $TAZLVL9
+
+    - name: Running Kyoto Test
+      run: |
+        ./scenarioFromOSM.py --osm tests/kyoto_osm.xml --out tests/kyoto --lefthand $COMMON $TAZLVL9
