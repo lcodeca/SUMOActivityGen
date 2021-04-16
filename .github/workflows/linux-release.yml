@@ -43,6 +43,7 @@ jobs:
         ./scenarioFromOSM.py --osm tests/wildau_osm.xml --out tests/wildau $COMMON $SINGLETAZ
 
     - name: Upload Wildau Test
+      if: ${{ failure() }}
       uses: actions/upload-artifact@v2
       with:
           name: Wildau
@@ -80,6 +81,7 @@ jobs:
         ./scenarioFromOSM.py --osm tests/dlr_osm.xml --out tests/dlr $COMMON $SINGLETAZ
 
     - name: Upload DLR Test
+      if: ${{ failure() }}
       uses: actions/upload-artifact@v2
       with:
           name: DLR
@@ -116,6 +118,15 @@ jobs:
         export COMMON='--local-defaults --processes 2 --population 1000 --taxi-fleet 100'
         ./scenarioFromOSM.py --osm tests/docklands_osm.xml --out tests/docklands --lefthand $COMMON $TAZLVL9
 
+    - name: Upload Docklands Test
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v2
+      with:
+          name: Docklands
+          path: |
+            tests/docklands
+          retention-days: 7
+
   Sophia:
     runs-on: ubuntu-latest
 
@@ -144,6 +155,15 @@ jobs:
         export TAZLVL9='--admin-level 9'
         export COMMON='--local-defaults --processes 2 --population 1000 --taxi-fleet 100'
         ./scenarioFromOSM.py --osm tests/sophia_osm.xml --out tests/sophia $COMMON $TAZLVL9
+
+    - name: Upload Sophia Test
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v2
+      with:
+          name: Sophia
+          path: |
+            tests/sophia
+          retention-days: 7
 
   Riyadh:
     runs-on: ubuntu-latest
@@ -174,6 +194,15 @@ jobs:
         export COMMON='--local-defaults --processes 2 --population 1000 --taxi-fleet 100'
         ./scenarioFromOSM.py --osm tests/riyadh_osm.xml --out tests/riyadh $COMMON $TAZLVL9
 
+    - name: Upload Riyadh Test
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v2
+      with:
+          name: Riyadh
+          path: |
+            tests/riyadh
+          retention-days: 7
+
   Kyoto:
     runs-on: ubuntu-latest
 
@@ -202,3 +231,12 @@ jobs:
         export TAZLVL9='--admin-level 9'
         export COMMON='--local-defaults --processes 2 --population 1000 --taxi-fleet 100'
         ./scenarioFromOSM.py --osm tests/kyoto_osm.xml --out tests/kyoto --lefthand $COMMON $TAZLVL9
+
+    - name: Upload Kyoto Test
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v2
+      with:
+          name: Kyoto
+          path: |
+            tests/kyoto
+          retention-days: 7
