@@ -55,7 +55,7 @@ jobs:
         cmake ..
         make -j4
         sudo make install
-        export SUMO_HOME='/usr/local/share/sumo' >> ~/.bashrc
+        echo "export SUMO_HOME='/usr/local/share/sumo'" >> ~/.bashrc
 
     - name: Installing SUMO
       if: matrix.build_type == 'release'
@@ -63,7 +63,7 @@ jobs:
         sudo add-apt-repository ppa:sumo/stable
         sudo apt-get update
         sudo apt-get install sumo sumo-tools
-        export SUMO_HOME='/usr/share/sumo' >> ~/.bashrc
+        echo "export SUMO_HOME='/usr/share/sumo'" >> ~/.bashrc
 
     - name: Installing SAGA Requirements
       run: |
@@ -72,9 +72,9 @@ jobs:
     - name: Preparing Tests
       run: |
         gunzip tests/*.gz
-        export SINGLETAZ='--single-taz' >> ~/.bashrc
-        export TAZLVL9='--admin-level 9' >> ~/.bashrc
-        export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100' >> ~/.bashrc
+        echo "export SINGLETAZ='--single-taz'" >> ~/.bashrc
+        echo "export TAZLVL9='--admin-level 9'" >> ~/.bashrc
+        echo "export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100'" >> ~/.bashrc
 
     - name: Running Wildau Test
       run: |
