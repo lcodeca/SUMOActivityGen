@@ -55,7 +55,7 @@ jobs:
         cmake ..
         make -j4
         sudo make install
-        export SUMO_HOME=/usr/local/share/sumo
+        export SUMO_HOME='/usr/local/share/sumo' >> ~/.bashrc
 
     - name: Installing SUMO
       if: matrix.build_type == 'release'
@@ -63,7 +63,7 @@ jobs:
         sudo add-apt-repository ppa:sumo/stable
         sudo apt-get update
         sudo apt-get install sumo sumo-tools
-        export SUMO_HOME=/usr/share/sumo
+        export SUMO_HOME='/usr/share/sumo' >> ~/.bashrc
 
     - name: Installing SAGA Requirements
       run: |
@@ -72,31 +72,36 @@ jobs:
     - name: Preparing Tests
       run: |
         gunzip tests/*.gz
-        export SINGLETAZ='--single-taz'
-        export TAZLVL9='--admin-level 9'
-        export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100'
-
+        export SINGLETAZ='--single-taz' >> ~/.bashrc
+        export TAZLVL9='--admin-level 9' >> ~/.bashrc
+        export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100' >> ~/.bashrc
 
     - name: Running Wildau Test
       run: |
+        source ~/.bashrc
         ./scenarioFromOSM.py --osm tests/wildau_osm.xml --out tests/wildau $COMMON $SINGLETAZ
 
     - name: Running DLR Test
       run: |
+        source ~/.bashrc
         ./scenarioFromOSM.py --osm tests/dlr_osm.xml --out tests/dlr $COMMON $SINGLETAZ
 
     - name: Running Docklands Test
       run: |
+        source ~/.bashrc
         ./scenarioFromOSM.py --osm tests/docklands_osm.xml --out tests/docklands --lefthand $COMMON $TAZLVL9
 
     - name: Running Sophia Antipolis Test
       run: |
+        source ~/.bashrc
         ./scenarioFromOSM.py --osm tests/sophia_osm.xml --out tests/sophia $COMMON $TAZLVL9
 
     - name: Running Riyadh Test
       run: |
+        source ~/.bashrc
         ./scenarioFromOSM.py --osm tests/riyadh_osm.xml --out tests/riyadh $COMMON $TAZLVL9
 
     - name: Running Kyoto Test
       run: |
+        source ~/.bashrc
         ./scenarioFromOSM.py --osm tests/kyoto_osm.xml --out tests/kyoto --lefthand $COMMON $TAZLVL9
