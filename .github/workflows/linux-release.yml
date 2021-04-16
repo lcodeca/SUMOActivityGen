@@ -15,9 +15,8 @@ on:
     - cron:  '5 1 * * SUN'
 
 jobs:
-  job1:
-    build:
-      runs-on: ubuntu-latest
+  setup:
+    runs-on: ubuntu-latest
 
     steps:
     - name: Cloning SAGA
@@ -37,10 +36,9 @@ jobs:
       run: |
         gunzip tests/*.gz
 
-  job2:
-    build:
-      runs-on: ubuntu-latest
-      needs: job1
+  Wildau:
+    runs-on: ubuntu-latest
+    needs: setup
 
     steps:
     - name: Running Wildau Test
@@ -51,10 +49,9 @@ jobs:
         export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100'
         ./scenarioFromOSM.py --osm tests/wildau_osm.xml --out tests/wildau $COMMON $SINGLETAZ
 
-  job3:
-    build:
-      runs-on: ubuntu-latest
-      needs: job1
+  DLR:
+    runs-on: ubuntu-latest
+    needs: setup
 
     steps:
     - name: Running DLR Test
@@ -65,10 +62,9 @@ jobs:
         export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100'
         ./scenarioFromOSM.py --osm tests/dlr_osm.xml --out tests/dlr $COMMON $SINGLETAZ
 
-  job4:
-    build:
-      runs-on: ubuntu-latest
-      needs: job1
+  Docklands:
+    runs-on: ubuntu-latest
+    needs: setup
 
     steps:
     - name: Running Docklands Test
@@ -79,10 +75,9 @@ jobs:
         export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100'
         ./scenarioFromOSM.py --osm tests/docklands_osm.xml --out tests/docklands --lefthand $COMMON $TAZLVL9
 
-  job5:
-    build:
-      runs-on: ubuntu-latest
-      needs: job1
+  Sophia:
+    runs-on: ubuntu-latest
+    needs: setup
 
     steps:
     - name: Running Sophia Antipolis Test
@@ -93,10 +88,9 @@ jobs:
         export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100'
         ./scenarioFromOSM.py --osm tests/sophia_osm.xml --out tests/sophia $COMMON $TAZLVL9
 
-  job6:
-    build:
-      runs-on: ubuntu-latest
-      needs: job1
+  Riyadh:
+    runs-on: ubuntu-latest
+    needs: setup
 
     steps:
     - name: Running Riyadh Test
@@ -107,10 +101,9 @@ jobs:
         export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100'
         ./scenarioFromOSM.py --osm tests/riyadh_osm.xml --out tests/riyadh $COMMON $TAZLVL9
 
-  job7:
-    build:
-      runs-on: ubuntu-latest
-      needs: job1
+  Kyoto:
+    runs-on: ubuntu-latest
+    needs: setup
 
     steps:
     - name: Running Kyoto Test
