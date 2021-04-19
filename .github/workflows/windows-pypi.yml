@@ -35,7 +35,7 @@ jobs:
 
     - name: Running Wildau Test
       run: |
-        ./scenarioFromOSM.py --osm wildau_osm.xml --out wildau --local-defaults --processes 2 --population 1000 --taxi-fleet 100 --single-taz
+        python scenarioFromOSM.py --osm wildau_osm.xml --out wildau --local-defaults --processes 2 --population 1000 --taxi-fleet 100 --single-taz
 
     - name: Upload Wildau Test
       if: ${{ failure() }}
@@ -68,7 +68,7 @@ jobs:
 
     - name: Running DLR Test
       run: |
-        ./scenarioFromOSM.py --osm dlr_osm.xml --out dlr --local-defaults --processes 2 --population 1000 --taxi-fleet 100 --single-taz
+        python scenarioFromOSM.py --osm dlr_osm.xml --out dlr --local-defaults --processes 2 --population 1000 --taxi-fleet 100 --single-taz
 
     - name: Upload DLR Test
       if: ${{ failure() }}
@@ -101,7 +101,7 @@ jobs:
 
     - name: Running Docklands Test
       run: |
-        ./scenarioFromOSM.py --osm docklands_osm.xml --out docklands --lefthand --local-defaults --processes 2 --population 1000 --taxi-fleet 100 --admin-level 9
+        python scenarioFromOSM.py --osm docklands_osm.xml --out docklands --lefthand --local-defaults --processes 2 --population 1000 --taxi-fleet 100 --admin-level 9
 
     - name: Upload Docklands Test
       if: ${{ failure() }}
@@ -134,7 +134,7 @@ jobs:
 
     - name: Running Sophia Antipolis Test
       run: |
-        ./scenarioFromOSM.py --osm sophia_osm.xml --out sophia --local-defaults --processes 2 --population 1000 --taxi-fleet 100 --admin-level 9
+        python scenarioFromOSM.py --osm sophia_osm.xml --out sophia --local-defaults --processes 2 --population 1000 --taxi-fleet 100 --admin-level 9
 
     - name: Upload Sophia Test
       if: ${{ failure() }}
@@ -167,7 +167,7 @@ jobs:
 
     - name: Running Riyadh Test
       run: |
-        ./scenarioFromOSM.py --osm riyadh_osm.xml --out riyadh --local-defaults --processes 2 --population 1000 --taxi-fleet 100 --admin-level 9
+        python scenarioFromOSM.py --osm riyadh_osm.xml --out riyadh --local-defaults --processes 2 --population 1000 --taxi-fleet 100 --admin-level 9
 
     - name: Upload Riyadh Test
       if: ${{ failure() }}
@@ -200,7 +200,7 @@ jobs:
 
     - name: Running Kyoto Test
       run: |
-        ./scenarioFromOSM.py --osm kyoto_osm.xml --out kyoto --lefthand --local-defaults --processes 2 --population 1000 --taxi-fleet 100 --admin-level 9
+        python scenarioFromOSM.py --osm kyoto_osm.xml --out kyoto --lefthand --local-defaults --processes 2 --population 1000 --taxi-fleet 100 --admin-level 9
 
     - name: Upload Kyoto Test
       if: ${{ failure() }}
