@@ -20,7 +20,6 @@ import xml.etree.ElementTree
 from functools import partial
 import pyproj
 import numpy
-import folium
 
 import shapely.geometry as geometry
 from shapely.ops import transform
@@ -123,6 +122,7 @@ class GenerateTAZandWeightsFromOSM():
 
     def save_taz_to_osm(self, filename):
         """ Plot the boundaries using folium to html file."""
+        import folium
         print("Plotting TAZ to OpenStreetMap in file {}.".format(filename))
         colors = ['#0000FF', '#0040FF', '#0080FF', '#00FFB0', '#00E000', '#80FF00',
                   '#FFFF00', '#FFC000', '#FF0000']
@@ -545,7 +545,7 @@ class GenerateTAZandWeightsFromOSM():
 
 def _parse_xml_file(xml_file):
     """ Extract all info from an OSM file. """
-    xml_tree = xml.etree.ElementTree.parse(xml_file).getroot()
+    xml_tree = xml.etree.ElementTree.parse(sumolib.open(xml_file)).getroot()
     dict_xml = {}
     for child in xml_tree:
         parsed = {}

@@ -74,7 +74,7 @@ class TaxiStandsFromOSMGenerator():
     @staticmethod
     def _parse_xml_file(xml_file):
         """ Extract all info from an OSM file. """
-        xml_tree = xml.etree.ElementTree.parse(xml_file).getroot()
+        xml_tree = xml.etree.ElementTree.parse(sumolib.open(xml_file)).getroot()
         dict_xml = {}
         for child in xml_tree:
             parsed = {}
