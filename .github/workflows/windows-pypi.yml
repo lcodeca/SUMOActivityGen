@@ -13,7 +13,7 @@ on:
       - 'docs/**'
 
 jobs:
-  build:
+  Wildau:
     runs-on: windows-latest
 
     steps:
@@ -25,8 +25,188 @@ jobs:
         python -m pip install --index-url https://test.pypi.org/simple/ eclipse-sumo
         python -c "import sumo; print('SUMO_HOME=%s\\share\\sumo' % sumo.SUMO_HOME)" >> $env:GITHUB_ENV
 
-    - name: Run tests
+    - name: Installing SAGA Requirements
       run: |
-        python -m pip install -r requirements.txt
-        python -c "import gzip; open('wildau.xml', 'wb').write(gzip.open('tests\\wildau_osm.xml.gz').read())"
-        python scenarioFromOSM.py --osm wildau.xml --out wildau --local-defaults
+        sudo pip3 install --no-cache-dir -r requirements.txt
+
+    - name: Preparing Tests
+      run: |
+        python -c "import gzip; open('wildau_osm.xml', 'wb').write(gzip.open('tests\\wildau_osm.xml.gz').read())"
+
+    - name: Running Wildau Test
+      run: |
+        ./scenarioFromOSM.py --osm wildau_osm.xml --out wildau --local-defaults --processes 2 --population 1000 --taxi-fleet 100 --single-taz
+
+    - name: Upload Wildau Test
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v2
+      with:
+          name: Wildau
+          path: |
+            wildau
+          retention-days: 7
+
+  DLR:
+    runs-on: windows-latest
+
+    steps:
+    - name: Cloning SAGA
+      uses: actions/checkout@v2
+
+    - name: Installing PyPI SUMO
+      run: |
+        python -m pip install --index-url https://test.pypi.org/simple/ eclipse-sumo
+        python -c "import sumo; print('SUMO_HOME=%s\\share\\sumo' % sumo.SUMO_HOME)" >> $env:GITHUB_ENV
+
+    - name: Installing SAGA Requirements
+      run: |
+        sudo pip3 install --no-cache-dir -r requirements.txt
+
+    - name: Preparing Tests
+      run: |
+        python -c "import gzip; open('dlr_osm.xml', 'wb').write(gzip.open('tests\\dlr_osm.xml.gz').read())"
+
+    - name: Running DLR Test
+      run: |
+        ./scenarioFromOSM.py --osm dlr_osm.xml --out dlr --local-defaults --processes 2 --population 1000 --taxi-fleet 100 --single-taz
+
+    - name: Upload DLR Test
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v2
+      with:
+          name: DLR
+          path: |
+            dlr
+          retention-days: 7
+
+  Docklands:
+    runs-on: windows-latest
+
+    steps:
+    - name: Cloning SAGA
+      uses: actions/checkout@v2
+
+    - name: Installing PyPI SUMO
+      run: |
+        python -m pip install --index-url https://test.pypi.org/simple/ eclipse-sumo
+        python -c "import sumo; print('SUMO_HOME=%s\\share\\sumo' % sumo.SUMO_HOME)" >> $env:GITHUB_ENV
+
+    - name: Installing SAGA Requirements
+      run: |
+        sudo pip3 install --no-cache-dir -r requirements.txt
+
+    - name: Preparing Tests
+      run: |
+        python -c "import gzip; open('docklands_osm.xml', 'wb').write(gzip.open('tests\\docklands_osm.xml.gz').read())"
+
+    - name: Running Docklands Test
+      run: |
+        ./scenarioFromOSM.py --osm docklands_osm.xml --out docklands --lefthand --local-defaults --processes 2 --population 1000 --taxi-fleet 100 --admin-level 9
+
+    - name: Upload Docklands Test
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v2
+      with:
+          name: Docklands
+          path: |
+            docklands
+          retention-days: 7
+
+  Sophia:
+    runs-on: windows-latest
+
+    steps:
+    - name: Cloning SAGA
+      uses: actions/checkout@v2
+
+    - name: Installing PyPI SUMO
+      run: |
+        python -m pip install --index-url https://test.pypi.org/simple/ eclipse-sumo
+        python -c "import sumo; print('SUMO_HOME=%s\\share\\sumo' % sumo.SUMO_HOME)" >> $env:GITHUB_ENV
+
+    - name: Installing SAGA Requirements
+      run: |
+        sudo pip3 install --no-cache-dir -r requirements.txt
+
+    - name: Preparing Tests
+      run: |
+        python -c "import gzip; open('sophia_osm.xml', 'wb').write(gzip.open('tests\\sophia_osm.xml.gz').read())"
+
+    - name: Running Sophia Antipolis Test
+      run: |
+        ./scenarioFromOSM.py --osm sophia_osm.xml --out sophia --local-defaults --processes 2 --population 1000 --taxi-fleet 100 --admin-level 9
+
+    - name: Upload Sophia Test
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v2
+      with:
+          name: Sophia
+          path: |
+            sophia
+          retention-days: 7
+
+  Riyadh:
+    runs-on: windows-latest
+
+    steps:
+    - name: Cloning SAGA
+      uses: actions/checkout@v2
+
+    - name: Installing PyPI SUMO
+      run: |
+        python -m pip install --index-url https://test.pypi.org/simple/ eclipse-sumo
+        python -c "import sumo; print('SUMO_HOME=%s\\share\\sumo' % sumo.SUMO_HOME)" >> $env:GITHUB_ENV
+
+    - name: Installing SAGA Requirements
+      run: |
+        sudo pip3 install --no-cache-dir -r requirements.txt
+
+    - name: Preparing Tests
+      run: |
+        python -c "import gzip; open('riyadh_osm.xml', 'wb').write(gzip.open('tests\\riyadh_osm.xml.gz').read())"
+
+    - name: Running Riyadh Test
+      run: |
+        ./scenarioFromOSM.py --osm riyadh_osm.xml --out riyadh --local-defaults --processes 2 --population 1000 --taxi-fleet 100 --admin-level 9
+
+    - name: Upload Riyadh Test
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v2
+      with:
+          name: Riyadh
+          path: |
+            riyadh
+          retention-days: 7
+
+  Kyoto:
+    runs-on: windows-latest
+
+    steps:
+    - name: Cloning SAGA
+      uses: actions/checkout@v2
+
+    - name: Installing PyPI SUMO
+      run: |
+        python -m pip install --index-url https://test.pypi.org/simple/ eclipse-sumo
+        python -c "import sumo; print('SUMO_HOME=%s\\share\\sumo' % sumo.SUMO_HOME)" >> $env:GITHUB_ENV
+
+    - name: Installing SAGA Requirements
+      run: |
+        sudo pip3 install --no-cache-dir -r requirements.txt
+
+    - name: Preparing Tests
+      run: |
+        python -c "import gzip; open('kyoto_osm.xml', 'wb').write(gzip.open('tests\\kyoto_osm.xml.gz').read())"
+
+    - name: Running Kyoto Test
+      run: |
+        ./scenarioFromOSM.py --osm kyoto_osm.xml --out kyoto --lefthand --local-defaults --processes 2 --population 1000 --taxi-fleet 100 --admin-level 9
+
+    - name: Upload Kyoto Test
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v2
+      with:
+          name: Kyoto
+          path: |
+            kyoto
+          retention-days: 7
