@@ -27,7 +27,7 @@ jobs:
 
     - name: Installing SAGA Requirements
       run: |
-        sudo pip3 install --no-cache-dir -r requirements.txt
+        python -m pip install -r requirements.txt
 
     - name: Preparing Tests
       run: |
@@ -60,7 +60,7 @@ jobs:
 
     - name: Installing SAGA Requirements
       run: |
-        sudo pip3 install --no-cache-dir -r requirements.txt
+        python -m pip install -r requirements.txt
 
     - name: Preparing Tests
       run: |
@@ -93,7 +93,7 @@ jobs:
 
     - name: Installing SAGA Requirements
       run: |
-        sudo pip3 install --no-cache-dir -r requirements.txt
+        python -m pip install -r requirements.txt
 
     - name: Preparing Tests
       run: |
@@ -126,7 +126,7 @@ jobs:
 
     - name: Installing SAGA Requirements
       run: |
-        sudo pip3 install --no-cache-dir -r requirements.txt
+        python -m pip install -r requirements.txt
 
     - name: Preparing Tests
       run: |
@@ -159,7 +159,7 @@ jobs:
 
     - name: Installing SAGA Requirements
       run: |
-        sudo pip3 install --no-cache-dir -r requirements.txt
+        python -m pip install -r requirements.txt
 
     - name: Preparing Tests
       run: |
@@ -192,7 +192,7 @@ jobs:
 
     - name: Installing SAGA Requirements
       run: |
-        sudo pip3 install --no-cache-dir -r requirements.txt
+        python -m pip install -r requirements.txt
 
     - name: Preparing Tests
       run: |
