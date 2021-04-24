@@ -11,19 +11,15 @@
 
 import argparse
 import csv
-import multiprocessing
 import os
 from random import choice
 import sys
 import xml.etree.ElementTree
 
-from functools import partial
-import pyproj
 import numpy
 import folium
 
 import shapely.geometry as geometry
-from shapely.ops import transform
 
 from tqdm import tqdm
 
@@ -320,64 +316,43 @@ class GenerateTAZandWeightsFromOSM():
 
     def _processing_buildings(self):
         """ Compute centroid and approximated area for each building (if necessary). """
-        with multiprocessing.Pool(processes=self._param.processes) as pool:
-            buildings = list(self._osm_buildings.values())
-            for res in tqdm(pool.imap_unordered(self._processing_buildings_parallel, buildings)):
-                self._osm_buildings[res['id']] = res
-
-    @staticmethod
-    def _processing_buildings_parallel(building):
-        """ Compute centroid and approximated area for each building (if necessary). """
-        # compute the centroid
-        points = []
-        for node in building['nodes']:
-            points.append([float(node['lat']), float(node['lon'])])
-        centroid = numpy.mean(numpy.array(points), axis=0)
-        building['tag'].append({
-            'k':  'centroid',
-            'v':  '{}, {}'.format(centroid[0], centroid[1])
-            })
-        # compute the approximated area
-        approx = geometry.MultiPoint(points).convex_hull
-        # http://openstreetmapdata.com/info/projections
-        proj = partial(pyproj.transform, pyproj.Proj('epsg:4326'),
-                       pyproj.Proj('epsg:3857'))
-        converted_approximation = transform(proj, approx)
-        area = 0.0
-        if not numpy.isnan(converted_approximation.area):
-            area = converted_approximation.area
-        building['tag'].append({
-            'k':  'approx_area',
-            'v':  area
-            })
-        return building
+        for building in self._osm_buildings.values():
+            # compute the centroid
+            points = []
+            proj_points = []
+            for node in building['nodes']:
+                lat, lon = float(node['lat']), float(node['lon'])
+                points.append([lat, lon])
+                proj_points.append(self._net.convertLonLat2XY(lon, lat))
+            centroid = numpy.mean(numpy.array(points), axis=0)
+            building['tag'].append({
+                'k':  'centroid',
+                'v':  '{}, {}'.format(centroid[0], centroid[1])
+                })
+            # compute the approximated area
+            approx = geometry.MultiPoint(proj_points).convex_hull
+            area = 0.0
+            if not numpy.isnan(approx.area):
+                area = approx.area
+            building['tag'].append({
+                'k':  'approx_area',
+                'v':  area
+                })
 
     def _sort_buildings(self):
         """ Multiprocess helper to sort buildings to the right TAZ based on centroid. """
-        with multiprocessing.Pool(processes=self._param.processes) as pool:
-            list_parameters = list()
-            slices = numpy.array_split(list(self._osm_buildings.values()), self._param.processes)
-            print('Preprocessing for multiprocessing...')
-            for buildings in slices:
-                parameters = {
-                    'buildings': buildings,
-                    'all_in_one': self._param.single_taz,
-                    'taz': self._taz,
-                    'net_file': self._param.net_file,
-                    'max_entrance_dist': self._param.max_entrance,
-                }
-                list_parameters.append(parameters)
-            print('Buildings to TAZ multiprocessing...')
-            for res in pool.imap_unordered(self._sort_buildings_into_taz, list_parameters):
-                for id_taz, assocs in res.items():
-                    self._taz[id_taz]['buildings'] |= assocs['buildings']
-                    self._taz[id_taz]['buildings_cumul_area'] += assocs['buildings_cumul_area']
+        parameters = {
+            'buildings': list(self._osm_buildings.values()),
+            'all_in_one': self._param.single_taz,
+            'taz': self._taz,
+            'max_entrance_dist': self._param.max_entrance,
+        }
+        for id_taz, assocs in self._sort_buildings_into_taz(parameters).items():
+            self._taz[id_taz]['buildings'] |= assocs['buildings']
+            self._taz[id_taz]['buildings_cumul_area'] += assocs['buildings_cumul_area']
 
-    @staticmethod
-    def _sort_buildings_into_taz(parameters):
+    def _sort_buildings_into_taz(self, parameters):
         """ Sort buildings to the right TAZ based on centroid. """
-        ## global sumolib network
-        sumo_net = sumolib.net.readNet(parameters['net_file'])
 
         def _get_centroid(building):
             """ Return the lat lon of the centroid. """
@@ -396,8 +371,6 @@ class GenerateTAZandWeightsFromOSM():
 
         def _building_to_edge(id_taz, x_coord, y_coord):
             """ Given the coords of a building, return te closest edge """
-            centroid = (x_coord, y_coord)
-
             pedestrian_edge_info = None
             pedestrian_dist_edge = sys.float_info.max
             generic_edge_info = None
@@ -410,27 +383,10 @@ class GenerateTAZandWeightsFromOSM():
 
             radius = 50.0
             while pedestrian_edge_info is None or generic_edge_info is None:
-                if radius > parameters['max_entrance_dist']:
-                    # it was not possible to find two edges in the same TAZ
-                    # we are going to use the closest whatever-edge we can find.
-                    if pedestrian_edge_info is None and pedestrian_edge_info_oth_taz is not None:
-                        pedestrian_edge_info = pedestrian_edge_info_oth_taz
-                        pedestrian_dist_edge = pedestrian_dist_edge_oth_taz
-                        print(
-                            'Warning: pedestrian edge {} is outside the TAZ. [Search radius: {}m]'
-                            .format(pedestrian_edge_info.getID(), radius))
-                    if generic_edge_info is None and generic_edge_info_oth_taz is not None:
-                        generic_edge_info = generic_edge_info_oth_taz
-                        generic_dist_edge = generic_dist_edge_oth_taz
-                        print(
-                            'Warning: passenger edge {} is outside the TAZ. [Search radius: {}m]'
-                            .format(generic_edge_info.getID(), radius))
-
-                neighbours = sumo_net.getNeighboringEdges(x_coord, y_coord, r=radius)
-                for edge, _ in neighbours:
+                neighbours = self._net.getNeighboringEdges(x_coord, y_coord, r=radius)
+                for edge, dist in sorted(neighbours, key=lambda x:x[1]):
                     if edge.allows('rail'):
                         continue
-                    _, _, dist = edge.getClosestLanePosDist(centroid)
                     if edge.getID() not in parameters['taz'][id_taz]['edges']:
                         # OTHER TAZ
                         if edge.allows('passenger') and dist < generic_dist_edge_oth_taz:
@@ -447,7 +403,25 @@ class GenerateTAZandWeightsFromOSM():
                         if edge.allows('pedestrian') and dist < pedestrian_dist_edge:
                             pedestrian_edge_info = edge
                             pedestrian_dist_edge = dist
-                radius += 50.0
+                        if pedestrian_edge_info is not None and generic_edge_info is not None:
+                            break
+
+                if radius > parameters['max_entrance_dist']:
+                    # it was not possible to find two edges in the same TAZ
+                    # we are going to use the closest whatever-edge we can find.
+                    if pedestrian_edge_info is None and pedestrian_edge_info_oth_taz is not None:
+                        pedestrian_edge_info = pedestrian_edge_info_oth_taz
+                        pedestrian_dist_edge = pedestrian_dist_edge_oth_taz
+                        print(
+                            'Warning: pedestrian edge {} is outside the TAZ. [distance: {}m]'
+                            .format(pedestrian_edge_info.getID(), pedestrian_dist_edge_oth_taz))
+                    if generic_edge_info is None and generic_edge_info_oth_taz is not None:
+                        generic_edge_info = generic_edge_info_oth_taz
+                        generic_dist_edge = generic_dist_edge_oth_taz
+                        print(
+                            'Warning: passenger edge {} is outside the TAZ. [distance: {}m]'
+                            .format(generic_edge_info.getID(), generic_dist_edge_oth_taz))
+                radius *= 2
 
             if generic_edge_info and generic_dist_edge > 500.0:
                 print("A building entrance {} [passenger] is {} meters away.".format(
@@ -483,7 +457,7 @@ class GenerateTAZandWeightsFromOSM():
                 ## there have been problems with the building conversion
                 continue
             lat, lon = _get_centroid(building)
-            x_coord, y_coord = sumo_net.convertLonLat2XY(lon, lat)
+            x_coord, y_coord = self._net.convertLonLat2XY(lon, lat)
 
             if parameters['all_in_one']:
                 ret = _associate_building_to_edges('all', x_coord, y_coord)
