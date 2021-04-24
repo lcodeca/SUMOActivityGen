@@ -812,7 +812,7 @@ class MobilityGenerator():
         """ Saving all the trips to files divided by slice. """
         for name, dict_trips in self._all_trips.items():
             filename = '{}{}.rou.xml'.format(self._conf['outputPrefix'], name)
-            with open(filename, 'w') as tripfile:
+            with open(filename, 'w', encoding="utf8") as tripfile:
                 all_trips = ''
                 for time in sorted(dict_trips.keys()):
                     for person in dict_trips[time]:
@@ -831,7 +831,7 @@ class MobilityGenerator():
                     merged_trips[time].append(person['string'])
 
         filename = '{}.merged.rou.xml'.format(self._conf['outputPrefix'])
-        with open(filename, 'w') as tripfile:
+        with open(filename, 'w', encoding="utf8") as tripfile:
             all_trips = ''
             for time in sorted(merged_trips.keys()):
                 for person in merged_trips[time]:
