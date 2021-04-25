@@ -11,6 +11,7 @@
 
 import argparse
 import csv
+import multiprocessing
 import os
 from random import choice
 import sys
@@ -345,14 +346,33 @@ class GenerateTAZandWeightsFromOSM():
             'buildings': list(self._osm_buildings.values()),
             'all_in_one': self._param.single_taz,
             'taz': self._taz,
+            'net_file': self._param.net_file,
             'max_entrance_dist': self._param.max_entrance,
         }
-        for id_taz, assocs in self._sort_buildings_into_taz(parameters).items():
-            self._taz[id_taz]['buildings'] |= assocs['buildings']
-            self._taz[id_taz]['buildings_cumul_area'] += assocs['buildings_cumul_area']
+        if self._param.processes == 1:
+            for id_taz, assocs in self._sort_buildings_into_taz(parameters, self._net).items():
+                self._taz[id_taz]['buildings'] |= assocs['buildings']
+                self._taz[id_taz]['buildings_cumul_area'] += assocs['buildings_cumul_area']
+            return
+        with multiprocessing.Pool(processes=self._param.processes) as pool:
+            list_parameters = []
+            slices = numpy.array_split(list(self._osm_buildings.values()), self._param.processes)
+            print('Preprocessing for multiprocessing...')
+            for buildings in slices:
+                list_parameters.append(parameters.copy())
+                list_parameters[-1]['buildings'] = buildings
+            print('Buildings to TAZ multiprocessing...')
+            for res in pool.imap_unordered(self._sort_buildings_into_taz, list_parameters):
+                for id_taz, assocs in res.items():
+                    self._taz[id_taz]['buildings'] |= assocs['buildings']
+                    self._taz[id_taz]['buildings_cumul_area'] += assocs['buildings_cumul_area']
 
-    def _sort_buildings_into_taz(self, parameters):
+
+    @staticmethod
+    def _sort_buildings_into_taz(parameters, sumo_net=None):
         """ Sort buildings to the right TAZ based on centroid. """
+        if sumo_net is None:
+            sumo_net = sumolib.net.readNet(parameters['net_file'])
 
         def _get_centroid(building):
             """ Return the lat lon of the centroid. """
@@ -383,8 +403,8 @@ class GenerateTAZandWeightsFromOSM():
 
             radius = 50.0
             while pedestrian_edge_info is None or generic_edge_info is None:
-                neighbours = self._net.getNeighboringEdges(x_coord, y_coord, r=radius)
-                for edge, dist in sorted(neighbours, key=lambda x:x[1]):
+                neighbours = sumo_net.getNeighboringEdges(x_coord, y_coord, r=radius)
+                for edge, dist in sorted(neighbours, key=lambda x: x[1]):
                     if edge.allows('rail'):
                         continue
                     if edge.getID() not in parameters['taz'][id_taz]['edges']:
@@ -412,15 +432,13 @@ class GenerateTAZandWeightsFromOSM():
                     if pedestrian_edge_info is None and pedestrian_edge_info_oth_taz is not None:
                         pedestrian_edge_info = pedestrian_edge_info_oth_taz
                         pedestrian_dist_edge = pedestrian_dist_edge_oth_taz
-                        print(
-                            'Warning: pedestrian edge {} is outside the TAZ. [distance: {}m]'
-                            .format(pedestrian_edge_info.getID(), pedestrian_dist_edge_oth_taz))
+                        print('Warning: pedestrian edge {} is outside the TAZ. [distance: {}m]'
+                              .format(pedestrian_edge_info.getID(), pedestrian_dist_edge_oth_taz))
                     if generic_edge_info is None and generic_edge_info_oth_taz is not None:
                         generic_edge_info = generic_edge_info_oth_taz
                         generic_dist_edge = generic_dist_edge_oth_taz
-                        print(
-                            'Warning: passenger edge {} is outside the TAZ. [distance: {}m]'
-                            .format(generic_edge_info.getID(), generic_dist_edge_oth_taz))
+                        print('Warning: passenger edge {} is outside the TAZ. [distance: {}m]'
+                              .format(generic_edge_info.getID(), generic_dist_edge_oth_taz))
                 radius *= 2
 
             if generic_edge_info and generic_dist_edge > 500.0:
@@ -457,7 +475,7 @@ class GenerateTAZandWeightsFromOSM():
                 ## there have been problems with the building conversion
                 continue
             lat, lon = _get_centroid(building)
-            x_coord, y_coord = self._net.convertLonLat2XY(lon, lat)
+            x_coord, y_coord = sumo_net.convertLonLat2XY(lon, lat)
 
             if parameters['all_in_one']:
                 ret = _associate_building_to_edges('all', x_coord, y_coord)
