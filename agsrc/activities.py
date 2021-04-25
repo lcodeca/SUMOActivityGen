@@ -32,8 +32,8 @@ class Activities():
     ## Activity
     Activity = collections.namedtuple(
         'Activity',
-        ['activity', 'fromEdge', 'toEdge', 'arrivalPos', 'start', 'duration', 'final'],
-        defaults=(None,) * 7)
+        ['activity', 'fromEdge', 'toEdge', 'arrivalPos', 'start', 'duration', 'final'])
+    Activity.__new__.__defaults__ = (None,) * len(Activity._fields)
 
     def __init__(self, conf, sumo, environment, logger, profiling=False):
         """
@@ -44,6 +44,7 @@ class Activities():
         """
         self._conf = conf
         self._sumo = sumo
+        self._cache = {}
         self._env = environment
         self.logger = logger
 
@@ -168,9 +169,8 @@ class Activities():
             (*) Uses the ellipses defined by the foci center and other,
                 and the major axe of 1.30 * distance between the foci.
         """
-        length = None
         try:
-            length = self._sumo.simulation.findRoute(center, other).length
+            length = self._get_cached_dist(center, other)
         except TraCIException:
             raise sagaexceptions.TripGenerationActivityError(
                 'No route between {} and {}'.format(center, other))
@@ -209,9 +209,8 @@ class Activities():
         """ Return a random edge in within the ellipse defined by the foci,
             and the major axe of 1.30 * distance between the foci.
         """
-        length = None
         try:
-            length = self._sumo.simulation.findRoute(focus1, focus2).length
+            length = self._get_cached_dist(focus1, focus2)
             self.logger.debug('_random_location_ellipse: %s --> %s [%.2f]', focus1, focus2, length)
         except TraCIException:
             raise sagaexceptions.TripGenerationActivityError(
@@ -232,8 +231,8 @@ class Activities():
             if not allowed:
                 continue
             try:
-                first = self._sumo.simulation.findRoute(focus1, edge).length
-                second = self._sumo.simulation.findRoute(edge, focus2).length
+                first = self._get_cached_dist(focus1, edge)
+                second = self._get_cached_dist(edge, focus2)
                 if first + second <= major_axe:
                     self.logger.debug('_random_location_ellipse: %s --> %s [%.2f]', focus1, edge, first)
                     self.logger.debug(
@@ -376,3 +375,10 @@ class Activities():
             if duration <= 0:
                 return self._get_timing_from_activity(activity)
         return start, duration
+
+    def _get_cached_dist(self, orig, dest):
+        cached = self._cache.get((orig, dest))
+        if cached is None:
+            cached = self._sumo.simulation.findRoute(orig, dest).length
+            self._cache[(orig, dest)] = cached
+        return cached
