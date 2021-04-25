@@ -32,8 +32,8 @@ class Activities():
     ## Activity
     Activity = collections.namedtuple(
         'Activity',
-        ['activity', 'fromEdge', 'toEdge', 'arrivalPos', 'start', 'duration', 'final'],
-        defaults=(None,) * 7)
+        ['activity', 'fromEdge', 'toEdge', 'arrivalPos', 'start', 'duration', 'final'])
+    Activity.__new__.__defaults__ = (None,) * len(Activity._fields)
 
     def __init__(self, conf, sumo, environment, logger, profiling=False):
         """
