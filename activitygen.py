@@ -710,59 +710,20 @@ class MobilityGenerator():
             self.logger.debug('Stage ' + os.linesep + '%s', pformat(stage))
             self.logger.debug('Associated flags ' + os.linesep + '%s', pformat(flags))
             if stage.type == tc.STAGE_WAITING:
-                # print(os.linesep, stage)
-                # print('Expectation:', self.WAIT.format(lane=stage.edges, duration=stage.travelTime, action=stage.description))
-                # print("FLAG True", stage.toXML(True))
-                # print("FLAG False", stage.toXML(False))
-                # print(os.linesep)
                 _waiting_stages.append(stage)
                 stages += self.WAIT.format(lane=stage.edges,
                                            duration=stage.travelTime,
                                            action=stage.description)
             elif stage.type == tc.STAGE_WALKING:
-                # print(os.linesep, stage)
-
-                # stages += stage.toXML(_is_first_stage)
-                # if stage.arrivalPos:
-                #     _last_arrival_pos = stage.arrivalPos
-
-                if stage.destStop:
-                    stages += self.WALK_BUS.format(
-                        edges=' '.join(stage.edges), busStop=stage.destStop)
-                    # print('Expectation:', self.WALK_BUS.format(edges=' '.join(stage.edges), busStop=stage.destStop))
-                else:
-                    if stage.arrivalPos:
-                        stages += self.WALK_W_ARRIVAL.format(
-                            edges=' '.join(stage.edges), arrival=stage.arrivalPos)
-                        # print('Expectation:', self.WALK_W_ARRIVAL.format(edges=' '.join(stage.edges), arrival=stage.arrivalPos))
-                        _last_arrival_pos = stage.arrivalPos
-                    else:
-                        stages += self.WALK.format(edges=' '.join(stage.edges))
-                        # print('Expectation:', self.WALK.format(edges=' '.join(stage.edges)))
-                # print("FLAG True", stage.toXML(True))
-                # print("FLAG False", stage.toXML(False))
-                # print(os.linesep)
+                if stage.arrivalPos:
+                    _last_arrival_pos = stage.arrivalPos
+                stages += os.linesep + "\t" + stage.toXML(_is_first_stage)
             elif stage.type == tc.STAGE_DRIVING:
                 if stage.line != stage.intended:
                     # Public Transports
-                    # !!! vType MISSING !!! line=164:0, intended=pt_bus_164:0.50
-                    # intended is the transport id, so it must be different
-                    # print(os.linesep, stage)
-                    # print('Expectation:', self.RIDE_BUS.format(busStop=stage.destStop, lines=stage.line, intended=stage.intended, depart=stage.depart))
-                    # print("FLAG True", stage.toXML(True))
-                    # print("FLAG False", stage.toXML(False))
-                    # stages += os.linesep + "\t" + stage.toXML(_is_first_stage).rstrip() + "/>"
-                    # print("Generated: ", os.linesep + "\t\t" + stage.toXML(_is_first_stage).rstrip() + "/>")
-                    # print(os.linesep)
-                    stages += self.RIDE_BUS.format(
-                        busStop=stage.destStop, lines=stage.line,
-                        intended=stage.intended, depart=stage.depart)
+                    stages += os.linesep + "\t" + stage.toXML(_is_first_stage)
                 else:
                     # Triggered vehicle (vTyep == line == intended)
-                    # vType=bicycle, line=bicycle, intended=bicycle
-                    # vType=passenger, line=passenger, intended=passenger
-                    # vType=motorcycle, line=motorcycle, intended=motorcycle
-                    # vType=on-demand, line=on-demand, intended=on-demand
                     _ride_id = None
                     if stage.intended == 'on-demand':
                         _ride_id = 'taxi'
@@ -812,34 +773,12 @@ class MobilityGenerator():
 
                         self.logger.debug('_triggered_stops: %s', _triggered_stops)
 
-                    # print(os.linesep + "ORIGINAL:", stage)
-                    # print('Expectation:', self.RIDE_TRIGGERED.format(from_edge=stage.edges[0], to_edge=stage.edges[-1], vehicle_id=_ride_id, arrival=stage.arrivalPos))
-                    # print("FLAG True", stage.toXML(True))
-                    # print("FLAG False", stage.toXML(False))
-                    # stage.line = _ride_id
-                    # stage.intended = _ride_id
-                    # print(os.linesep + "FIXED:", stage)
-                    # print("FLAG True", stage.toXML(True))
-                    # print("FLAG False", stage.toXML(False))
-                    # stages += os.linesep + "\t" + stage.toXML(_is_first_stage).rstrip() + " arrivalPos=\"{}\"/>".format(stage.arrivalPos)
-                    # print("Generated: ", os.linesep + "\t" + stage.toXML(_is_first_stage).rstrip() + " arrivalPos=\"{}\"/>".format(stage.arrivalPos))
-                    # print(os.linesep)
-                    # print(stage.destStop, stage)
-                    if stage.destStop: #and stage.destStop != self.LAST_STOP_PLACEHOLDER and not _is_parking_area:
-                        # print('RIDE_TRIGGERED_BUSSTOP!')
-                        stages += self.RIDE_TRIGGERED_BUSSTOP.format(
-                            from_edge=stage.edges[0], busStop=stage.destStop,
-                            vehicle_id=_ride_id, arrival=stage.arrivalPos)
-                    else:
-                        # print('RIDE_TRIGGERED_TO!')
-                        stages += self.RIDE_TRIGGERED_TO.format(
-                            from_edge=stage.edges[0], to_edge=stage.edges[-1],
-                            vehicle_id=_ride_id, arrival=stage.arrivalPos)
-
+                    stage.line = _ride_id
+                    stage.intended = _ride_id
+                    stages += os.linesep + "\t" + stage.toXML(_is_first_stage)
                     self.logger.debug('Stages: %s', stages)
 
             _is_first_stage = False
-            # input()
             self.logger.debug(' -- Next stage -- ')
 
         ## fixing the personal triggered vehicles
