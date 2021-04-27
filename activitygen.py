@@ -68,7 +68,7 @@ class MobilityGenerator():
         PROBABILITY = 1
         WEIGHT = 2
 
-    LAST_STOP_PLACEHOLDER = -42.42
+    # LAST_STOP_PLACEHOLDER = -42.42
 
     def _configure_loggers(self):
         """ Setup the console and file logger. """
@@ -174,7 +174,7 @@ class MobilityGenerator():
             elif child.tag == 'vTypeDistribution':
                 for subchild in child:
                     self._vtype_to_vclasses[child.attrib['id']].append(subchild.attrib['vClass'])
-        self.logger.debug('vTypes loaded: \n%s', pformat(self._vtype_to_vclasses))
+        self.logger.debug('vTypes loaded: ' + os.linesep + '%s', pformat(self._vtype_to_vclasses))
 
     ## ---------------------------------------------------------------------------------------- ##
     ##                                Mobility Generation                                       ##
@@ -467,8 +467,10 @@ class MobilityGenerator():
                             mode, route,
                             self._conf['intermodalOptions']['vehicleAllowedParking']) and
                             route[-1].type == tc.STAGE_DRIVING):
-                        route[-1].destStop = p_id
-                        route[-1].arrivalPos = self._env.get_parking_position(p_id)
+                        # Additional parking tag to be added to the stage.
+                        parking_stage = route[-1]
+                        parking_stage.arrivalPos = self._env.get_parking_position(p_id)
+                        route[-1] = (parking_stage, {'parkingArea': p_id})
                         route.extend(_last_mile)
                     else:
                         route = None
@@ -535,7 +537,7 @@ class MobilityGenerator():
                         #   check if it's required to add the walk back to the vehicle and
                         #   change the stage.fromEdge of the next stage.
                         self.logger.debug(
-                            'Check walking back requirements for route \n%s', pformat(route))
+                            'Check walking back requirements for route ' + os.linesep + '%s', pformat(route))
                         if route[-2].type == tc.STAGE_WALKING:
                             # generate the walk back
                             from_edge = route[-2].edges[-1] # end ow the walking stage
@@ -557,7 +559,7 @@ class MobilityGenerator():
                                 raise sagaexceptions.TripGenerationRouteError(
                                     'Route not found for the walk back from {} to {}.'.format(
                                         from_edge, to_edge))
-                            self.logger.debug('Walk back: \n%s', pformat(walk_back))
+                            self.logger.debug('Walk back: ' + os.linesep + '%s', pformat(walk_back))
                             if walk_back and not isinstance(walk_back, list):
                                 # list in until SUMO 1.4.0 included, tuple onward
                                 walk_back = list(walk_back)
@@ -574,16 +576,16 @@ class MobilityGenerator():
                 else:
                     raise sagaexceptions.TripGenerationInconsistencyError(
                         'Final route misses last waiting stage.', _person_stages)
-                ## change the last triggered ride with LAST_STOP_PLACEHOLDER to fix the last stop
+                ## Adding to the last triggered ride the lastStop=True flag to fix the last stop
                 if _mode not in ['public', 'taxi'] and _ptype not in ['pedestrian']:
                     _pos = len(route) - 1
                     while _pos >= 0:
                         if route[_pos].type == tc.STAGE_DRIVING:
-                            route[_pos].destStop = self.LAST_STOP_PLACEHOLDER
+                            route[_pos] = (route[_pos], {'lastStop': True})
                             break
                         _pos -= 1
 
-            self.logger.debug('Route: \n%s', pformat(route))
+            self.logger.debug('Route: ' + os.linesep +' %s', pformat(route))
 
             if route is None:
                 raise sagaexceptions.TripGenerationRouteError(
@@ -591,6 +593,8 @@ class MobilityGenerator():
 
             ## Add the stage to the full planned trip.
             for step in route:
+                if isinstance(step, tuple):
+                    step, _ = step # handle flags
                 _current_depart_time += step.travelTime
                 _person_steps.append(step)
 
@@ -656,8 +660,11 @@ class MobilityGenerator():
     RIDE_BUS = """
         <ride busStop="{busStop}" lines="{lines}" intended="{intended}" depart="{depart}"/>"""
 
-    RIDE_TRIGGERED = """
+    RIDE_TRIGGERED_TO = """
         <ride from="{from_edge}" to="{to_edge}" arrivalPos="{arrival}" lines="{vehicle_id}"/>"""
+
+    RIDE_TRIGGERED_BUSSTOP = """
+        <ride from="{from_edge}" busStop="{busStop}" arrivalPos="{arrival}" lines="{vehicle_id}"/>"""
 
     VEHICLE_TRIGGERED = """
     <vehicle id="{id}" type="{v_type}" depart="triggered">{route}{stops}
@@ -681,7 +688,7 @@ class MobilityGenerator():
     def _generate_sumo_trip_from_activitygen(self, person):
         """ Generate the XML string for SUMO route file from a person-trip. """
         self.logger.debug(' ............... _generate_sumo_trip_from_activitygen ............... ')
-        self.logger.debug('\n%s', pformat(person))
+        self.logger.debug('' + os.linesep + '%s', pformat(person))
         self.logger.debug(' ............... computation ............... ')
         complete_trip = ''
         triggered = ''
@@ -693,29 +700,60 @@ class MobilityGenerator():
         _last_arrival_pos = None
         _internal_consistency_check = []
         _waiting_stages = []
+        _is_first_stage = True
+        _is_parking_area = False
         for stage in person['stages']:
-            self.logger.debug('Stage \n%s', pformat(stage))
+            flags = {}
+            if isinstance(stage, tuple):
+                # we have additionals associated to the stage
+                stage, flags = stage
+            self.logger.debug('Stage ' + os.linesep + '%s', pformat(stage))
+            self.logger.debug('Associated flags ' + os.linesep + '%s', pformat(flags))
             if stage.type == tc.STAGE_WAITING:
+                # print(os.linesep, stage)
+                # print('Expectation:', self.WAIT.format(lane=stage.edges, duration=stage.travelTime, action=stage.description))
+                # print("FLAG True", stage.toXML(True))
+                # print("FLAG False", stage.toXML(False))
+                # print(os.linesep)
                 _waiting_stages.append(stage)
                 stages += self.WAIT.format(lane=stage.edges,
                                            duration=stage.travelTime,
                                            action=stage.description)
             elif stage.type == tc.STAGE_WALKING:
+                # print(os.linesep, stage)
+
+                # stages += stage.toXML(_is_first_stage)
+                # if stage.arrivalPos:
+                #     _last_arrival_pos = stage.arrivalPos
+
                 if stage.destStop:
                     stages += self.WALK_BUS.format(
                         edges=' '.join(stage.edges), busStop=stage.destStop)
+                    # print('Expectation:', self.WALK_BUS.format(edges=' '.join(stage.edges), busStop=stage.destStop))
                 else:
                     if stage.arrivalPos:
                         stages += self.WALK_W_ARRIVAL.format(
                             edges=' '.join(stage.edges), arrival=stage.arrivalPos)
+                        # print('Expectation:', self.WALK_W_ARRIVAL.format(edges=' '.join(stage.edges), arrival=stage.arrivalPos))
                         _last_arrival_pos = stage.arrivalPos
                     else:
                         stages += self.WALK.format(edges=' '.join(stage.edges))
+                        # print('Expectation:', self.WALK.format(edges=' '.join(stage.edges)))
+                # print("FLAG True", stage.toXML(True))
+                # print("FLAG False", stage.toXML(False))
+                # print(os.linesep)
             elif stage.type == tc.STAGE_DRIVING:
                 if stage.line != stage.intended:
                     # Public Transports
                     # !!! vType MISSING !!! line=164:0, intended=pt_bus_164:0.50
                     # intended is the transport id, so it must be different
+                    # print(os.linesep, stage)
+                    # print('Expectation:', self.RIDE_BUS.format(busStop=stage.destStop, lines=stage.line, intended=stage.intended, depart=stage.depart))
+                    # print("FLAG True", stage.toXML(True))
+                    # print("FLAG False", stage.toXML(False))
+                    # stages += os.linesep + "\t" + stage.toXML(_is_first_stage).rstrip() + "/>"
+                    # print("Generated: ", os.linesep + "\t\t" + stage.toXML(_is_first_stage).rstrip() + "/>")
+                    # print(os.linesep)
                     stages += self.RIDE_BUS.format(
                         busStop=stage.destStop, lines=stage.line,
                         intended=stage.intended, depart=stage.depart)
@@ -748,18 +786,18 @@ class MobilityGenerator():
                         _triggered_vtype = stage.vType
                         _stop = ''
                         self.logger.debug(
-                            'travelTime: %f - destStop: %s', stage.travelTime, stage.destStop)
-                        if stage.destStop == self.LAST_STOP_PLACEHOLDER:
+                            'travelTime: %f - destStop: %s', stage.travelTime, stage.destStop) # this many need fixing
+                        if 'lastStop' in flags:
                             self.logger.debug('Final stop reached.')
                             _stop = self.FINAL_STOP.format(
                                 lane=self._env.get_stopping_lane(
                                     stage.edges[-1], self._vtype_to_vclasses[_triggered_vtype]))
                         else:
-                            if stage.destStop and stage.vType in self._conf[
-                                'intermodalOptions']['vehicleAllowedParking']:
+                            if 'parkingArea' in flags:
                                 self.logger.debug('Generate the stop in a parking area.')
                                 _stop = self.STOP_PARKING_TRIGGERED.format(
-                                    id=stage.destStop, person=person['id'])
+                                    id=flags['parkingArea'], person=person['id'])
+                                _is_parking_area = True
                             else:
                                 self.logger.debug('Generate the stop on the side of the road.')
                                 start, end = self._generate_stop_position(
@@ -774,12 +812,34 @@ class MobilityGenerator():
 
                         self.logger.debug('_triggered_stops: %s', _triggered_stops)
 
-                    stages += self.RIDE_TRIGGERED.format(
-                        from_edge=stage.edges[0], to_edge=stage.edges[-1], vehicle_id=_ride_id,
-                        arrival=stage.arrivalPos)
+                    # print(os.linesep + "ORIGINAL:", stage)
+                    # print('Expectation:', self.RIDE_TRIGGERED.format(from_edge=stage.edges[0], to_edge=stage.edges[-1], vehicle_id=_ride_id, arrival=stage.arrivalPos))
+                    # print("FLAG True", stage.toXML(True))
+                    # print("FLAG False", stage.toXML(False))
+                    # stage.line = _ride_id
+                    # stage.intended = _ride_id
+                    # print(os.linesep + "FIXED:", stage)
+                    # print("FLAG True", stage.toXML(True))
+                    # print("FLAG False", stage.toXML(False))
+                    # stages += os.linesep + "\t" + stage.toXML(_is_first_stage).rstrip() + " arrivalPos=\"{}\"/>".format(stage.arrivalPos)
+                    # print("Generated: ", os.linesep + "\t" + stage.toXML(_is_first_stage).rstrip() + " arrivalPos=\"{}\"/>".format(stage.arrivalPos))
+                    # print(os.linesep)
+                    # print(stage.destStop, stage)
+                    if stage.destStop: #and stage.destStop != self.LAST_STOP_PLACEHOLDER and not _is_parking_area:
+                        # print('RIDE_TRIGGERED_BUSSTOP!')
+                        stages += self.RIDE_TRIGGERED_BUSSTOP.format(
+                            from_edge=stage.edges[0], busStop=stage.destStop,
+                            vehicle_id=_ride_id, arrival=stage.arrivalPos)
+                    else:
+                        # print('RIDE_TRIGGERED_TO!')
+                        stages += self.RIDE_TRIGGERED_TO.format(
+                            from_edge=stage.edges[0], to_edge=stage.edges[-1],
+                            vehicle_id=_ride_id, arrival=stage.arrivalPos)
 
                     self.logger.debug('Stages: %s', stages)
 
+            _is_first_stage = False
+            # input()
             self.logger.debug(' -- Next stage -- ')
 
         ## fixing the personal triggered vehicles
@@ -801,7 +861,7 @@ class MobilityGenerator():
         complete_trip += self.PERSON.format(
             id=person['id'], depart=person['depart'], stages=stages)
 
-        self.logger.debug('Complete trip: \n%s', complete_trip)
+        self.logger.debug('Complete trip: ' + os.linesep + '%s', complete_trip)
         return complete_trip
 
     ## ---------------------------------------------------------------------------------------- ##
