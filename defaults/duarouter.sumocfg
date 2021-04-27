@@ -59,9 +59,9 @@
 
         <persontrip.walkfactor value="0.75"/>
         <persontrip.taxi.waiting-time value="300"/>
-        <persontrip.transfer.car-walk value="parkingAreas,ptStops,allJunctions"/>
-        <persontrip.transfer.taxi-walk value="parkingAreas,ptStops,allJunctions"/>
-        <persontrip.transfer.walk-taxi value="parkingAreas,ptStops,allJunctions"/>
+        <persontrip.transfer.car-walk value="parkingAreas,allJunctions"/>
+        <persontrip.transfer.taxi-walk value="parkingAreas,allJunctions"/>
+        <persontrip.transfer.walk-taxi value="parkingAreas,allJunctions"/>
     </routing>
 
     <taxi_device>
