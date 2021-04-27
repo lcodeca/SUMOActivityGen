@@ -23,14 +23,16 @@ def cost_from_route(route):
     """ Compute the route cost. """
     cost = 0.0
     for stage in route:
-        cost += stage.cost
+        _stage, _ = unpack_stage(stage)
+        cost += _stage.cost
     return cost
 
 def ett_from_route(route):
     """ Compute the route etimated travel time. """
     ett = 0.0
     for stage in route:
-        ett += stage.travelTime
+        _stage, _ = unpack_stage(stage)
+        ett += _stage.travelTime
     return ett
 
 def get_intermodal_mode_parameters(mode, parking_requirements):
@@ -62,14 +64,24 @@ def is_valid_route(mode, route, parking_requirements):
             return True
     elif _mode == 'public':
         for stage in route:
-            if stage.line:
+            _stage, _ = unpack_stage(stage)
+            if _stage.line:
                 return True
     elif _mode in ('car', 'bicycle') or _vtype in parking_requirements:
         for stage in route:
-            if stage.type == tc.STAGE_DRIVING and len(stage.edges) >= 2:
+            _stage, _ = unpack_stage(stage)
+            if _stage.type == tc.STAGE_DRIVING and len(_stage.edges) >= 2:
                 return True
     else:
         for stage in route:
-            if len(stage.edges) >= 2:
+            _stage, _ = unpack_stage(stage)
+            if len(_stage.edges) >= 2:
                 return True
     return False
+
+def unpack_stage(stage):
+    _stage = stage
+    _flags = {}
+    if isinstance(stage, tuple):
+        _stage, _flags = stage
+    return _stage, _flags

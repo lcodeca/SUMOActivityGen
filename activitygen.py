@@ -594,8 +594,10 @@ class MobilityGenerator():
             ## Add the stage to the full planned trip.
             for step in route:
                 if isinstance(step, tuple):
-                    step, _ = step # handle flags
-                _current_depart_time += step.travelTime
+                    _sumo_step, _flags = sumoutils.unpack_stage(step) # handle flags
+                    _current_depart_time += _sumo_step.travelTime
+                else:
+                    _current_depart_time += step.travelTime
                 _person_steps.append(step)
 
             self.logger.debug('====================== Stage done. ======================')
@@ -703,10 +705,7 @@ class MobilityGenerator():
         _is_first_stage = True
         _is_parking_area = False
         for stage in person['stages']:
-            flags = {}
-            if isinstance(stage, tuple):
-                # we have additionals associated to the stage
-                stage, flags = stage
+            stage, flags = sumoutils.unpack_stage(stage)
             self.logger.debug('Stage ' + os.linesep + '%s', pformat(stage))
             self.logger.debug('Associated flags ' + os.linesep + '%s', pformat(flags))
             if stage.type == tc.STAGE_WAITING:
