@@ -12,9 +12,13 @@ terms of the Eclipse Public License 2.0 which is available at <http://www.eclips
 
 This Source Code may also be made available under the following Secondary Licenses when the conditions for such availability set forth in the Eclipse Public License, v. 2.0 are satisfied: GNU General Public License version 3 <https://www.gnu.org/licenses/gpl-3.0.txt>.
 
-## Overview
+## Status
 
-This project is in its early stages, and it is still under active development.
+Weekly update against the SUMO master branch.
+
+[![linux-master](https://github.com/lcodeca/SUMOActivityGen/actions/workflows/linux-master.yml/badge.svg)](https://github.com/lcodeca/SUMOActivityGen/actions/workflows/linux-master.yml) 
+
+## Overview
 
 * The complete generation of a scenario from OSM can be done using `python3 scenarioFromOSM.py --osm {osm file} --out {output directory}`. All the generated files are going to be in the output directory.
 * Alternatively, it can be tested and explored using the configuration files provided by [MoSTScenario](https://github.com/lcodeca/MoSTScenario) and in the `example` directory, starting from `bash most.generator.sh`.
