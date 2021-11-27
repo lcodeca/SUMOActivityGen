@@ -11,6 +11,8 @@ on:
   pull_request:    # run on pull requests
     paths-ignore:  # but ignore everything in the docs subfolder
       - 'docs/**'
+  schedule:
+    - cron:  '0 0 * * FRI'
 
 jobs:
   Wildau:
