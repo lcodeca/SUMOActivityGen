@@ -16,7 +16,7 @@ This Source Code may also be made available under the following Secondary Licens
 
 Weekly update against the SUMO master branch.
 
-[![linux-master](https://github.com/lcodeca/SUMOActivityGen/actions/workflows/linux-master.yml/badge.svg)](https://github.com/lcodeca/SUMOActivityGen/actions/workflows/linux-master.yml) 
+[![linux-master](https://github.com/lcodeca/SUMOActivityGen/actions/workflows/linux-master.yml/badge.svg)](https://github.com/lcodeca/SUMOActivityGen/actions/workflows/linux-master.yml) [![linux-release](https://github.com/lcodeca/SUMOActivityGen/actions/workflows/linux-release.yml/badge.svg)](https://github.com/lcodeca/SUMOActivityGen/actions/workflows/linux-release.yml) [![windows-pypi](https://github.com/lcodeca/SUMOActivityGen/actions/workflows/windows-pypi.yml/badge.svg)](https://github.com/lcodeca/SUMOActivityGen/actions/workflows/windows-pypi.yml)
 
 ## Overview
 
