@@ -196,11 +196,9 @@ DEFAULT_PT_STOPS_XML = "osm_stops.add.xml"
 DEFAULT_PT_LINES = "osm_ptlines.xml"
 DEFAULT_SIDE_PARKING_XML = "osm_parking.xml"
 DEFAULT_TYPE_FILES = (
-    "{}/data/typemap/osmNetconvert.typ.xml,"
-    "{}/data/typemap/osmNetconvertBicycle.typ.xml,"
-    "{}/data/typemap/osmNetconvertPedestrians.typ.xml".format(
-        os.environ["SUMO_HOME"], os.environ["SUMO_HOME"], os.environ["SUMO_HOME"]
-    )
+    f"{os.environ['SUMO_HOME']}/data/typemap/osmNetconvert.typ.xml,"
+    f"{os.environ['SUMO_HOME']}/data/typemap/osmNetconvertBicycle.typ.xml,"
+    f"{os.environ['SUMO_HOME']}/data/typemap/osmNetconvertPedestrians.typ.xml"
 )
 
 ## ptlines2flows
@@ -336,7 +334,8 @@ def _merge_parking_files(side_parking, parking_areas, complete_parking):
         side_parking_struct.append(element)
 
     merged_parking = ElementTree.ElementTree(side_parking_struct)
-    merged_parking.write(open(complete_parking, "wb"))
+    with open(complete_parking, "wb") as parking_file:
+        merged_parking.write(parking_file)
 
 
 def _call_generate_parking_area_rerouters(processes):
@@ -402,7 +401,7 @@ def _call_generate_parking_area_rerouters_for_stands(processes):
 
 def _call_generate_taz_buildings_from_osm(
     filename, single_taz, processes, admin_level, max_entrance, plot
-):
+):  # pylint: disable=R0913
     """Call directly generateTAZBuildingsFromOSM from SUMOActivityGen."""
     taz_buildings_options = [
         "--osm",

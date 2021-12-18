@@ -34,7 +34,7 @@ def get_options(cmd_args=None):
     return parser.parse_args(cmd_args)
 
 
-class SAGAReport():
+class SAGAReport:
     """SAGA Activities Report"""
 
     TRIPINFO_SCHEMA = os.path.join(
