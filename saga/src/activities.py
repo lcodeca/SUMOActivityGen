@@ -18,7 +18,7 @@ import sys
 import numpy
 from numpy.random import RandomState
 
-from agsrc import sagaexceptions, sumoutils
+from . import sagaexceptions, sumoutils
 
 if "SUMO_HOME" in os.environ:
     sys.path.append(os.path.join(os.environ["SUMO_HOME"], "tools"))

@@ -9,7 +9,6 @@
     http://www.eclipse.org/legal/epl-2.0.
 """
 
-import argparse
 import collections
 import cProfile
 
@@ -28,7 +27,7 @@ import numpy
 from numpy.random import RandomState
 from tqdm import tqdm
 
-from agsrc import activities, environment, sagaexceptions, sumoutils
+from . import activities, environment, sagaexceptions, sumoutils
 
 if "SUMO_HOME" in os.environ:
     sys.path.append(os.path.join(os.environ["SUMO_HOME"], "tools"))
