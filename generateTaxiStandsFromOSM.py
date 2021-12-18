@@ -84,9 +84,9 @@ class TaxiStandsFromOSMGenerator:
         self._options = options
         self._osm = self._parse_xml_file(options.osm_file)
         self._net = sumolib.net.readNet(options.net_file)
-        self._stands_edges_dict = dict()
-        self._osm_stands = dict()
-        self._sumo_stands = dict()
+        self._stands_edges_dict = {}
+        self._osm_stands = {}
+        self._sumo_stands = {}
 
     def stands_generation(self):
         """Main finction to generate all the taxi stands."""
@@ -113,12 +113,12 @@ class TaxiStandsFromOSMGenerator:
                 parsed[key] = value
 
             for attribute in child:
-                if attribute.tag in list(parsed.keys()):
+                if attribute.tag in parsed:
                     parsed[attribute.tag].append(attribute.attrib)
                 else:
                     parsed[attribute.tag] = [attribute.attrib]
 
-            if child.tag in list(dict_xml.keys()):
+            if child.tag in dict_xml:
                 dict_xml[child.tag].append(parsed)
             else:
                 dict_xml[child.tag] = [parsed]
@@ -140,7 +140,7 @@ class TaxiStandsFromOSMGenerator:
                 node["y"] = y_coord
                 self._osm_stands[node["id"]] = node
 
-        print("Gathered {} taxi stands.".format(len(list(self._osm_stands.keys()))))
+        print(f"Gathered {len(self._osm_stands)} taxi stands.")
 
     _TAXI_STANDS_DICT = {
         "amenity": ["taxi"],
@@ -202,9 +202,7 @@ class TaxiStandsFromOSMGenerator:
 
         if dist_lane > 50.0:
             print(
-                "Alert: taxi stand {} is {} meters from lane {}.".format(
-                    stand["id"], dist_lane, lane_info.getID()
-                )
+                f"Alert: taxi stand {stand['id']} is {dist_lane} meters from lane {lane_info.getID()}."  # pylint: disable=C0301
             )
 
         return (edge_info, lane_info, location)
@@ -220,7 +218,7 @@ class TaxiStandsFromOSMGenerator:
         for tag in self._osm_stands[stand_id]["tag"]:
             if tag["k"] == "capacity":
                 return int(tag["v"])
-        print("Taxi stand {} has no capacity tag.".format(stand_id))
+        print(f"Taxi stand {stand_id} has no capacity tag.")
         return self._options.default_capacity
 
     def _stands_sumo(self):
@@ -248,6 +246,7 @@ class TaxiStandsFromOSMGenerator:
 
             self._sumo_stands[plid] = new_pl
 
+    # pylint: disable=C0301
     _ADDITIONALS_TPL = """<?xml version="1.0" encoding="UTF-8"?>
 
 <!-- Generated with generateParkingAreasFromOSM.py [https://github.com/lcodeca/SUMOActivityGen] -->
@@ -256,13 +255,14 @@ class TaxiStandsFromOSMGenerator:
 </additional>
     """
 
+    # pylint: disable=C0301
     _PARKINGS_TPL = """
     <parkingArea id="{id}" lane="{lane}" startPos="{start}" endPos="{end}" roadsideCapacity="{capacity}" friendlyPos="true"/>"""  # pylint: disable=C0301
 
     def _save_stands_to_file(self, filename):
         """Save the taxi stands into a SUMO XML additional file."""
-        print("Creation of {}".format(filename))
-        with open(filename, "w") as outfile:
+        print(f"Creation of {filename}")
+        with open(filename, "w") as outfile:  # pylint: disable=W1514
             list_of_stands = ""
             for stand in self._sumo_stands.values():
                 list_of_stands += self._PARKINGS_TPL.format(
@@ -274,7 +274,7 @@ class TaxiStandsFromOSMGenerator:
                 )
             content = list_of_stands
             outfile.write(self._ADDITIONALS_TPL.format(content=content))
-        print("{} created.".format(filename))
+        print(f"{filename} created.")
 
 
 def main(cmd_args):
