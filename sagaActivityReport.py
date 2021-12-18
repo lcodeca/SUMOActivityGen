@@ -23,7 +23,7 @@ import numpy as np
 def get_options(cmd_args=None):
     """Argument Parser."""
     parser = argparse.ArgumentParser(
-        prog="{}".format(sys.argv[0]),
+        prog=f"{sys.argv[0]}",
         usage="%(prog)s [options]",
         description="SAGA Live Monitoring",
     )
@@ -34,7 +34,7 @@ def get_options(cmd_args=None):
     return parser.parse_args(cmd_args)
 
 
-class SAGAReport(object):
+class SAGAReport():
     """SAGA Activities Report"""
 
     TRIPINFO_SCHEMA = os.path.join(
@@ -64,13 +64,11 @@ class SAGAReport(object):
             tree = etree.parse(self.tripinfo_file, parser)
         except etree.XMLSyntaxError as excp:
             print(
-                "Unable to use {} schema due to exception {}.".format(
-                    self.TRIPINFO_SCHEMA, pformat(excp)
-                )
+                f"Unable to use {self.TRIPINFO_SCHEMA} schema due to exception {pformat(excp)}."
             )
             tree = etree.parse(self.tripinfo_file)
 
-        print("Loading {} tripinfo file.".format(self.tripinfo_file))
+        print(f"Loading {self.tripinfo_file} tripinfo file.")
         for element in tree.getroot():
             if element.tag == "tripinfo":
                 self.tripinfo[element.attrib["id"]] = dict(element.attrib)
@@ -87,10 +85,9 @@ class SAGAReport(object):
 
     def process_tripinfo(self):
         """Process the Tripinfo file"""
-        print("Processing {} tripinfo file.".format(self.tripinfo_file))
-        for person, data in self.personinfo.items():
+        print(f"Processing {self.tripinfo_file} tripinfo file.")
+        for data in self.personinfo.values():
             for tag, stage in data["stages"]:
-                # print('[{}] {} \n{}'.format(person, tag, pformat(stage)))
                 if tag == "stop":
                     self.activity_stats[stage["actType"]].append(
                         {
@@ -102,10 +99,10 @@ class SAGAReport(object):
     def compute_stats(self):
         """Computing Stats from the Tripinfo file"""
         print("Computing statistics..")
-        stats = dict()
+        stats = {}
         for activity, data in self.activity_stats.items():
-            duration = list()
-            start = list()
+            duration = []
+            start = []
             for value in data:
                 start.append(float(value["arrival"]) - float(value["duration"]))
                 duration.append(float(value["duration"]))
@@ -125,10 +122,10 @@ class SAGAReport(object):
                     "std": np.std(start),
                 },
             }
-            print("[{}] \n{}".format(activity, pformat(stats[activity])))
+            print(f"[{activity}] \n{pformat(stats[activity])}")
 
-        print("Saving statistics to {} file.".format(self.output_file))
-        with open(self.output_file, "w") as output:
+        print(f"Saving statistics to {self.output_file} file.")
+        with open(self.output_file, "w") as output:  # pylint: disable=W1514
             json.dump(stats, output)
 
 
