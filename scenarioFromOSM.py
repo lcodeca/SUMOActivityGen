@@ -25,9 +25,13 @@ import generateTAZBuildingsFromOSM
 import generateTaxiStandsFromOSM
 import generateAmitranFromTAZWeights
 import generateDefaultsActivityGen
-import activitygen
 import sagaActivityReport
 
+<<<<<<< HEAD
+=======
+from saga import activitygen
+
+>>>>>>> c7a5a62 (linting w black)
 if "SUMO_HOME" in os.environ:
     sys.path.append(os.path.join(os.environ["SUMO_HOME"], "tools"))
     import ptlines2flows
@@ -290,10 +294,15 @@ def _call_pt_lines_to_flows():
         [
             "-n",
             DEFAULT_NET_XML,
+<<<<<<< HEAD
             "-b",
             "14400",  # 4h00
             "-e",
             "86400",  # 24h00
+=======
+            "-e",
+            "86400",
+>>>>>>> c7a5a62 (linting w black)
             "-p",
             "600",
             "--random-begin",
