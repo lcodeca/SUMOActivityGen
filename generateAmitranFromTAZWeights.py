@@ -50,14 +50,14 @@ class AmitranFromTAZWeightsGenerator:
 
     def __init__(self, options):
         self._options = options
-        self._taz_weights = dict()
-        self._odpairs = list()
+        self._taz_weights = {}
+        self._odpairs = []
         self._load_weights_from_csv()
         self._generate_odpairs_from_taz()
 
     def _load_weights_from_csv(self):
         """Load the TAZ weight from a CSV file."""
-        with open(self._options.taz_file, "r") as csvfile:
+        with open(self._options.taz_file, "r") as csvfile:  # pylint: disable=W1514
             weightreader = csv.reader(csvfile)
             header = []
             for row in weightreader:
@@ -94,6 +94,7 @@ class AmitranFromTAZWeightsGenerator:
                     }
                 )
 
+    # pylint: disable=C0301
     AMITRAN_TPL = """<demand xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://sumo.dlr.de/xsd/amitran/od.xsd">
     <actorConfig id="0">
         <timeSlice duration="86400000" startTime="0">{odpair}
@@ -107,8 +108,8 @@ class AmitranFromTAZWeightsGenerator:
 
     def save_odmatrix_to_file(self, filename):
         """Save the OD-matric in Amitran format."""
-        print("Creation of {}".format(filename))
-        with open(filename, "w") as outfile:
+        print(f"Creation of {filename}")
+        with open(filename, "w") as outfile:  # pylint: disable=W1514
             list_of_odpairs = ""
             for pair in self._odpairs:
                 list_of_odpairs += self.ODPAIR_TPL.format(
@@ -117,7 +118,7 @@ class AmitranFromTAZWeightsGenerator:
                     orig=pair["origin"],
                 )
             outfile.write(self.AMITRAN_TPL.format(odpair=list_of_odpairs))
-        print("{} created.".format(filename))
+        print(f"{filename} created.")
 
 
 def main(cmd_args):
