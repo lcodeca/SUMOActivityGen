@@ -72,7 +72,8 @@ class ActivitygenDefaultGenerator:
 
     def _load_configurations(self):
         """Load JSON configuration file in a dict."""
-        self._config_struct = json.loads(open(self._options.conf_file).read())
+        with open(self._options.conf_file, "r") as conf_file:  # pylint: disable=W1514
+            self._config_struct = json.loads(conf_file.read())
 
     def _set_taxi_fleet(self):
         """Setup the taxi fleet."""
@@ -94,7 +95,7 @@ class ActivitygenDefaultGenerator:
             perc = round(float(odpair["amount"]) / population, 4)
             if perc <= 0:
                 continue
-            slice_name = "{}_{}".format(odpair["origin"], odpair["destination"])
+            slice_name = f"{odpair['origin']}_{odpair['destination']}"
             self._config_struct["slices"][slice_name] = {
                 "perc": perc,
                 "loc_origin": odpair["origin"],
@@ -117,7 +118,7 @@ class ActivitygenDefaultGenerator:
     def _parse_xml_file(xml_file):
         """Extract all odPair info from an Amitran XML file."""
         xml_tree = xml.etree.ElementTree.parse(xml_file).getroot()
-        list_xml = list()
+        list_xml = []
         for child in xml_tree.iter("odPair"):
             parsed = {}
             for key, value in child.attrib.items():
@@ -127,10 +128,10 @@ class ActivitygenDefaultGenerator:
 
     def save_configuration_file(self, filename):
         """Save the configuration file."""
-        print("Creation of {}".format(filename))
-        with open(filename, "w") as outfile:
+        print(f"Creation of {filename}")
+        with open(filename, "w") as outfile:  # pylint: disable=W1514
             outfile.write(json.dumps(self._config_struct, indent=4))
-        print("{} created.".format(filename))
+        print(f"{filename} created.")
 
 
 def main(cmd_args):

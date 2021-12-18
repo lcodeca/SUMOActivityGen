@@ -77,9 +77,9 @@ class ParkingAreasFromOSMGenerator:
         self._options = options
         self._osm = self._parse_xml_file(options.osm_file)
         self._net = sumolib.net.readNet(options.net_file)
-        self._parkings_edges_dict = dict()
-        self._osm_parkings = dict()
-        self._sumo_parkings = dict()
+        self._parkings_edges_dict = {}
+        self._osm_parkings = {}
+        self._sumo_parkings = {}
 
     def parkings_generation(self):
         """Main finction to generate all the parking areas."""
@@ -106,12 +106,12 @@ class ParkingAreasFromOSMGenerator:
                 parsed[key] = value
 
             for attribute in child:
-                if attribute.tag in list(parsed.keys()):
+                if attribute.tag in parsed:
                     parsed[attribute.tag].append(attribute.attrib)
                 else:
                     parsed[attribute.tag] = [attribute.attrib]
 
-            if child.tag in list(dict_xml.keys()):
+            if child.tag in dict_xml:
                 dict_xml[child.tag].append(parsed)
             else:
                 dict_xml[child.tag] = [parsed]
@@ -133,7 +133,7 @@ class ParkingAreasFromOSMGenerator:
                 node["y"] = y_coord
                 self._osm_parkings[node["id"]] = node
 
-        print("Gathered {} parking lots.".format(len(list(self._osm_parkings.keys()))))
+        print(f"Gathered {len(self._osm_parkings)} parking lots.")
 
     _PARKING_DICT = {
         "amenity": ["parking", "motorcycle_parking", "parking_entrance"],
@@ -198,9 +198,7 @@ class ParkingAreasFromOSMGenerator:
 
         if dist_lane > 50.0:
             print(
-                "Alert: parking lots {} is {} meters from lane {}.".format(
-                    parking["id"], dist_lane, lane_info.getID()
-                )
+                f"Alert: parking lots {parking['id']} is {dist_lane} meters from lane {lane_info.getID()}."  # pylint: disable=C0301
             )
 
         return (edge_info, lane_info, location)
@@ -221,12 +219,10 @@ class ParkingAreasFromOSMGenerator:
                     return int(tag["v"])
                 except ValueError:
                     print(
-                        "Parking {} capacity is not an integer [{}].".format(
-                            parking_id, tag["v"]
-                        )
+                        f"Parking {parking_id} capacity is not an integer [{tag['v']}]."
                     )
                     return self._options.default_capacity
-        print("Parking {} has no capacity tag.".format(parking_id))
+        print(f"Parking {parking_id} has no capacity tag.")
         return self._options.default_capacity
 
     def _parkings_sumo(self):
@@ -254,6 +250,7 @@ class ParkingAreasFromOSMGenerator:
 
             self._sumo_parkings[plid] = new_pl
 
+    # pylint: disable=C0301
     _ADDITIONALS_TPL = """<?xml version="1.0" encoding="UTF-8"?>
 
 <!-- Generated with generateParkingAreasFromOSM.py [https://github.com/lcodeca/SUMOActivityGen] -->
@@ -262,13 +259,14 @@ class ParkingAreasFromOSMGenerator:
 </additional>
     """
 
+    # pylint: disable=C0301
     _PARKINGS_TPL = """
-    <parkingArea id="{id}" lane="{lane}" startPos="{start}" endPos="{end}" roadsideCapacity="{capacity}" friendlyPos="true"/>"""  # pylint: disable=C0301
+    <parkingArea id="{id}" lane="{lane}" startPos="{start}" endPos="{end}" roadsideCapacity="{capacity}" friendlyPos="true"/>"""
 
     def _save_parkings_to_file(self, filename):
         """Save the parking lots into a SUMO XML additional file."""
-        print("Creation of {}".format(filename))
-        with open(filename, "w") as outfile:
+        print(f"Creation of {filename}")
+        with open(filename, "w") as outfile:  # pylint: disable=W1514
             list_of_parkings = ""
             for parking in self._sumo_parkings.values():
                 list_of_parkings += self._PARKINGS_TPL.format(
@@ -280,7 +278,7 @@ class ParkingAreasFromOSMGenerator:
                 )
             content = list_of_parkings
             outfile.write(self._ADDITIONALS_TPL.format(content=content))
-        print("{} created.".format(filename))
+        print(f"{filename} created.")
 
 
 def main(cmd_args):
