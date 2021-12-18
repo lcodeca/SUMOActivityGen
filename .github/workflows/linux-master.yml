@@ -53,7 +53,7 @@ jobs:
 
     - name: Preparing Tests
       run: |
-        gunzip tests/*.gz
+        gunzip test_osm/wildau_osm.xml.gz
 
     - name: Running Wildau Test
       run: |
@@ -61,7 +61,7 @@ jobs:
         export SINGLETAZ='--single-taz'
         export TAZLVL9='--admin-level 9'
         export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100'
-        ./scenarioFromOSM.py --osm tests/wildau_osm.xml --out tests/wildau $COMMON $SINGLETAZ
+        ./scenarioFromOSM.py --osm test_osm/wildau_osm.xml --out test_osm/wildau $COMMON $SINGLETAZ
 
     - name: Upload Wildau Test
       if: ${{ failure() }}
@@ -69,7 +69,7 @@ jobs:
       with:
           name: Wildau
           path: |
-            tests/wildau
+            test_osm/wildau
           retention-days: 7
 
   DLR:
@@ -110,7 +110,7 @@ jobs:
 
     - name: Preparing Tests
       run: |
-        gunzip tests/*.gz
+        gunzip test_osm/dlr_osm.xml.gz
 
     - name: Running DLR Test
       run: |
@@ -118,7 +118,7 @@ jobs:
         export SINGLETAZ='--single-taz'
         export TAZLVL9='--admin-level 9'
         export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100'
-        ./scenarioFromOSM.py --osm tests/dlr_osm.xml --out tests/dlr $COMMON $SINGLETAZ
+        ./scenarioFromOSM.py --osm test_osm/dlr_osm.xml --out test_osm/dlr $COMMON $SINGLETAZ
 
     - name: Upload DLR Test
       if: ${{ failure() }}
@@ -126,7 +126,7 @@ jobs:
       with:
           name: DLR
           path: |
-            tests/dlr
+            test_osm/dlr
           retention-days: 7
 
   Docklands:
@@ -167,7 +167,7 @@ jobs:
 
     - name: Preparing Tests
       run: |
-        gunzip tests/*.gz
+        gunzip test_osm/docklands_osm.xml.gz
 
     - name: Running Docklands Test
       run: |
@@ -175,7 +175,7 @@ jobs:
         export SINGLETAZ='--single-taz'
         export TAZLVL9='--admin-level 9'
         export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100'
-        ./scenarioFromOSM.py --osm tests/docklands_osm.xml --out tests/docklands --lefthand $COMMON $TAZLVL9
+        ./scenarioFromOSM.py --osm test_osm/docklands_osm.xml --out test_osm/docklands --lefthand $COMMON $TAZLVL9
 
     - name: Upload Docklands Test
       if: ${{ failure() }}
@@ -183,7 +183,7 @@ jobs:
       with:
           name: Docklands
           path: |
-            tests/docklands
+            test_osm/docklands
           retention-days: 7
 
   Sophia:
@@ -224,7 +224,7 @@ jobs:
 
     - name: Preparing Tests
       run: |
-        gunzip tests/*.gz
+        gunzip test_osm/sophia_osm.xml.gz
 
     - name: Running Sophia Antipolis Test
       run: |
@@ -232,7 +232,7 @@ jobs:
         export SINGLETAZ='--single-taz'
         export TAZLVL9='--admin-level 9'
         export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100'
-        ./scenarioFromOSM.py --osm tests/sophia_osm.xml --out tests/sophia $COMMON $TAZLVL9
+        ./scenarioFromOSM.py --osm test_osm/sophia_osm.xml --out test_osm/sophia $COMMON $TAZLVL9
 
     - name: Upload Sophia Test
       if: ${{ failure() }}
@@ -240,7 +240,7 @@ jobs:
       with:
           name: Sophia
           path: |
-            tests/sophia
+            test_osm/sophia
           retention-days: 7
 
   Riyadh:
@@ -281,7 +281,7 @@ jobs:
 
     - name: Preparing Tests
       run: |
-        gunzip tests/*.gz
+        gunzip test_osm/riyadh_osm.xml.gz
 
     - name: Running Riyadh Test
       run: |
@@ -289,7 +289,7 @@ jobs:
         export SINGLETAZ='--single-taz'
         export TAZLVL9='--admin-level 9'
         export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100'
-        ./scenarioFromOSM.py --osm tests/riyadh_osm.xml --out tests/riyadh $COMMON $TAZLVL9
+        ./scenarioFromOSM.py --osm test_osm/riyadh_osm.xml --out test_osm/riyadh $COMMON $TAZLVL9
 
     - name: Upload Riyadh Test
       if: ${{ failure() }}
@@ -297,7 +297,7 @@ jobs:
       with:
           name: Riyadh
           path: |
-            tests/riyadh
+            test_osm/riyadh
           retention-days: 7
 
   Kyoto:
@@ -338,7 +338,7 @@ jobs:
 
     - name: Preparing Tests
       run: |
-        gunzip tests/*.gz
+        gunzip test_osm/kyoto_osm.xml.gz
 
     - name: Running Kyoto Test
       run: |
@@ -346,7 +346,7 @@ jobs:
         export SINGLETAZ='--single-taz'
         export TAZLVL9='--admin-level 9'
         export COMMON='--local-defaults --processes 4 --population 1000 --taxi-fleet 100'
-        ./scenarioFromOSM.py --osm tests/kyoto_osm.xml --out tests/kyoto --lefthand $COMMON $TAZLVL9
+        ./scenarioFromOSM.py --osm test_osm/kyoto_osm.xml --out test_osm/kyoto --lefthand $COMMON $TAZLVL9
 
     - name: Upload Kyoto Test
       if: ${{ failure() }}
@@ -354,5 +354,5 @@ jobs:
       with:
           name: Kyoto
           path: |
-            tests/kyoto
+            test_osm/kyoto
           retention-days: 7

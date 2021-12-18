@@ -33,7 +33,7 @@ jobs:
 
     - name: Preparing Tests
       run: |
-        python -c "import gzip; open('wildau_osm.xml', 'wb').write(gzip.open('tests\\wildau_osm.xml.gz').read())"
+        python -c "import gzip; open('wildau_osm.xml', 'wb').write(gzip.open('test_osm\\wildau_osm.xml.gz').read())"
 
     - name: Running Wildau Test
       run: |
@@ -66,7 +66,7 @@ jobs:
 
     - name: Preparing Tests
       run: |
-        python -c "import gzip; open('dlr_osm.xml', 'wb').write(gzip.open('tests\\dlr_osm.xml.gz').read())"
+        python -c "import gzip; open('dlr_osm.xml', 'wb').write(gzip.open('test_osm\\dlr_osm.xml.gz').read())"
 
     - name: Running DLR Test
       run: |
@@ -99,7 +99,7 @@ jobs:
 
     - name: Preparing Tests
       run: |
-        python -c "import gzip; open('docklands_osm.xml', 'wb').write(gzip.open('tests\\docklands_osm.xml.gz').read())"
+        python -c "import gzip; open('docklands_osm.xml', 'wb').write(gzip.open('test_osm\\docklands_osm.xml.gz').read())"
 
     - name: Running Docklands Test
       run: |
@@ -132,7 +132,7 @@ jobs:
 
     - name: Preparing Tests
       run: |
-        python -c "import gzip; open('sophia_osm.xml', 'wb').write(gzip.open('tests\\sophia_osm.xml.gz').read())"
+        python -c "import gzip; open('sophia_osm.xml', 'wb').write(gzip.open('test_osm\\sophia_osm.xml.gz').read())"
 
     - name: Running Sophia Antipolis Test
       run: |
@@ -165,7 +165,7 @@ jobs:
 
     - name: Preparing Tests
       run: |
-        python -c "import gzip; open('riyadh_osm.xml', 'wb').write(gzip.open('tests\\riyadh_osm.xml.gz').read())"
+        python -c "import gzip; open('riyadh_osm.xml', 'wb').write(gzip.open('test_osm\\riyadh_osm.xml.gz').read())"
 
     - name: Running Riyadh Test
       run: |
@@ -198,7 +198,7 @@ jobs:
 
     - name: Preparing Tests
       run: |
-        python -c "import gzip; open('kyoto_osm.xml', 'wb').write(gzip.open('tests\\kyoto_osm.xml.gz').read())"
+        python -c "import gzip; open('kyoto_osm.xml', 'wb').write(gzip.open('test_osm\\kyoto_osm.xml.gz').read())"
 
     - name: Running Kyoto Test
       run: |
