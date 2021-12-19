@@ -2,8 +2,8 @@
 misc
 
 # Testing
-test/*
-example/*
+local_tests
+example
 
 #Other
 .DS_Store
