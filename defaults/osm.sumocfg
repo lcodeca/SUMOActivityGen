@@ -63,6 +63,7 @@
         <device.rerouting.period value="300"/>
         <device.rerouting.pre-period value="300"/>
         <device.rerouting.bike-speeds value="true"/>
+        <device.rerouting.adaptation-interval value="60"/>
 
         <person-device.rerouting.probability value="1"/>
         <person-device.rerouting.period value="300"/>

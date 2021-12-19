@@ -25,6 +25,7 @@ import generateTAZBuildingsFromOSM
 import generateTaxiStandsFromOSM
 import generateAmitranFromTAZWeights
 import generateDefaultsActivityGen
+import sagaActivityGen
 import sagaActivityReport
 
 if "SUMO_HOME" in os.environ:
@@ -464,7 +465,7 @@ def _call_generate_defaults_activitygen(population, taxi_fleet):
 def _call_activitygen():
     """Call directly activitygen from SUMOActivityGen."""
     activitygen_options = ["-c", DEAFULT_SPECIFIC_AG_CONG]
-    activitygen.main(activitygen_options)
+    sagaActivityGen.main(activitygen_options)
 
 
 def _add_rou_to_default_sumocfg():

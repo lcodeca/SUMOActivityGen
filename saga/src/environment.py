@@ -11,7 +11,6 @@
 
 import collections
 import csv
-import logging
 import os
 from pprint import pformat
 import sys

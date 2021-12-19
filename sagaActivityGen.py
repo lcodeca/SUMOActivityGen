@@ -14,20 +14,11 @@ import cProfile
 
 import io
 import json
-import logging
 import os
-from pprint import pformat
 import pstats
 import sys
-import xml.etree.ElementTree
 
-from enum import Enum
-
-import numpy
-from numpy.random import RandomState
-from tqdm import tqdm
-
-from .src.mobilitygen import MobilityGenerator
+from saga.src.mobilitygen import MobilityGenerator
 
 if "SUMO_HOME" not in os.environ:
     sys.exit("Please declare environment variable 'SUMO_HOME'")
@@ -69,10 +60,11 @@ def main(cmd_args):
         profiler.enable()
     ## ========================              PROFILER              ======================== ##
 
-    print("Loading configuration file {}.".format(args.config))
-    MobilityGenerator(
-        json.loads(open(args.config).read()), profiling=args.profiling
-    ).generate()
+    print(f"Loading configuration file {args.config}.")
+    with open(args.config, "r") as config_file:  # pylint: disable=W1514
+        MobilityGenerator(
+            json.loads(config_file.read()), profiling=args.profiling
+        ).generate()
 
     ## ========================              PROFILER              ======================== ##
     if args.profiling:
