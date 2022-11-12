@@ -73,7 +73,7 @@ jobs:
           retention-days: 7
 
   DLR:
-    runs-on: ubuntu-latest
+    runs-on: Ubuntu-20.04
 
     steps:
     - name: Cloning SAGA
@@ -130,7 +130,7 @@ jobs:
           retention-days: 7
 
   Docklands:
-    runs-on: ubuntu-latest
+    runs-on: Ubuntu-20.04
 
     steps:
     - name: Cloning SAGA
@@ -187,7 +187,7 @@ jobs:
           retention-days: 7
 
   Sophia:
-    runs-on: ubuntu-latest
+    runs-on: Ubuntu-20.04
 
     steps:
     - name: Cloning SAGA
@@ -244,7 +244,7 @@ jobs:
           retention-days: 7
 
   Riyadh:
-    runs-on: ubuntu-latest
+    runs-on: Ubuntu-20.04
 
     steps:
     - name: Cloning SAGA
@@ -301,7 +301,7 @@ jobs:
           retention-days: 7
 
   Kyoto:
-    runs-on: ubuntu-latest
+    runs-on: Ubuntu-20.04
 
     steps:
     - name: Cloning SAGA
