@@ -107,7 +107,7 @@ class Activities():
             if self._env.valid_pair(from_edge, to_edge) and from_allowed and to_allowed:
                 try:
                     route = self._sumo.simulation.findIntermodalRoute(
-                        from_edge, to_edge, modes=_mode, pType=_ptype, vType=_vtype)
+                        from_edge, to_edge, modes=_mode, pType=_ptype, vType=_vtype, lenient=True)
                     if not sumoutils.is_valid_route(
                             mode, route, self._conf['intermodalOptions']['vehicleAllowedParking']):
                         route = None

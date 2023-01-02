@@ -49,7 +49,7 @@ def get_intermodal_mode_parameters(mode, parking_requirements):
         return '', '', mode     # Required to avoid the exchange point outside the parkingStop
     return 'car', '', mode      # Enables the walk from the exchange points to destination
 
-def is_valid_route(mode, route, parking_requirements):
+def is_valid_route(mode, route, parking_requirements, lenient=False):
     """ Handle findRoute and findIntermodalRoute results. """
     if route is None:
         # traci failed
@@ -61,6 +61,8 @@ def is_valid_route(mode, route, parking_requirements):
         if len(route.edges) >= 2:
             return True
     elif _mode == 'public':
+        if lenient:
+            return True
         for stage in route:
             if stage.line:
                 return True
