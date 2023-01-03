@@ -20,19 +20,21 @@ from numpy.random import RandomState
 
 from agsrc import sagaexceptions, sumoutils
 
-if 'SUMO_HOME' in os.environ:
-    sys.path.append(os.path.join(os.environ['SUMO_HOME'], 'tools'))
+if "SUMO_HOME" in os.environ:
+    sys.path.append(os.path.join(os.environ["SUMO_HOME"], "tools"))
     from traci.exceptions import TraCIException
 else:
     sys.exit("Please declare environment variable 'SUMO_HOME'")
 
-class Activities():
-    """ Generates the activity chains. """
+
+class Activities:
+    """Generates the activity chains."""
 
     ## Activity
     Activity = collections.namedtuple(
-        'Activity',
-        ['activity', 'fromEdge', 'toEdge', 'arrivalPos', 'start', 'duration', 'final'])
+        "Activity",
+        ["activity", "fromEdge", "toEdge", "arrivalPos", "start", "duration", "final"],
+    )
     Activity.__new__.__defaults__ = (None,) * len(Activity._fields)
 
     def __init__(self, conf, sumo, environment, logger, profiling=False):
@@ -49,43 +51,45 @@ class Activities():
         self.logger = logger
 
         self._max_retry_number = 1000
-        if 'maxNumTry' in conf:
-            self._max_retry_number = conf['maxNumTry']
+        if "maxNumTry" in conf:
+            self._max_retry_number = conf["maxNumTry"]
 
         self._profiling = profiling
 
-        self._random_generator = RandomState(seed=self._conf['seed'])
+        self._random_generator = RandomState(seed=self._conf["seed"])
 
     # Activity Locations
 
     def _stages_define_locations_position(self, person_stages):
-        """ Define the position of each location in the activity chain. """
+        """Define the position of each location in the activity chain."""
         home_pos = None
         primary_pos = None
 
         for pos, stage in person_stages.items():
-            if 'Home' in stage.activity:
+            if "Home" in stage.activity:
                 if not home_pos:
                     home_pos = self._env.get_random_pos_from_edge(stage.toEdge)
                 person_stages[pos] = stage._replace(arrivalPos=home_pos)
-            elif 'P-' in stage.activity:
+            elif "P-" in stage.activity:
                 if not primary_pos:
                     primary_pos = self._env.get_random_pos_from_edge(stage.toEdge)
                 person_stages[pos] = stage._replace(arrivalPos=primary_pos)
             else:
                 ## Secondary activities
                 person_stages[pos] = stage._replace(
-                    arrivalPos=self._env.get_random_pos_from_edge(stage.toEdge))
+                    arrivalPos=self._env.get_random_pos_from_edge(stage.toEdge)
+                )
 
         return person_stages
 
     def _stages_define_main_locations(self, from_area, to_area, mode):
-        """ Define a generic Home and Primary activity location.
-            The locations must be reachable in some ways.
+        """Define a generic Home and Primary activity location.
+        The locations must be reachable in some ways.
         """
         ## Mode split:
         _mode, _ptype, _vtype = sumoutils.get_intermodal_mode_parameters(
-            mode, self._conf['intermodalOptions']['vehicleAllowedParking'])
+            mode, self._conf["intermodalOptions"]["vehicleAllowedParking"]
+        )
 
         route = None
         from_edge = None
@@ -96,125 +100,158 @@ class Activities():
             ## Origin and Destination Selection
             from_edge, to_edge = self._env.select_pair(from_area, to_area)
             from_allowed = (
-                self._env.sumo_network.getEdge(from_edge).allows('pedestrian') and
-                self._env.sumo_network.getEdge(from_edge).allows('passenger') and
-                self._env.sumo_network.getEdge(
-                    from_edge).getLength() > self._conf['minEdgeAllowed'])
+                self._env.sumo_network.getEdge(from_edge).allows("pedestrian")
+                and self._env.sumo_network.getEdge(from_edge).allows("passenger")
+                and self._env.sumo_network.getEdge(from_edge).getLength()
+                > self._conf["minEdgeAllowed"]
+            )
             to_allowed = (
-                self._env.sumo_network.getEdge(to_edge).allows('pedestrian') and
-                self._env.sumo_network.getEdge(to_edge).allows('passenger') and
-                self._env.sumo_network.getEdge(to_edge).getLength() > self._conf['minEdgeAllowed'])
+                self._env.sumo_network.getEdge(to_edge).allows("pedestrian")
+                and self._env.sumo_network.getEdge(to_edge).allows("passenger")
+                and self._env.sumo_network.getEdge(to_edge).getLength()
+                > self._conf["minEdgeAllowed"]
+            )
             if self._env.valid_pair(from_edge, to_edge) and from_allowed and to_allowed:
                 try:
                     route = self._sumo.simulation.findIntermodalRoute(
-                        from_edge, to_edge, modes=_mode, pType=_ptype, vType=_vtype)
+                        from_edge, to_edge, modes=_mode, pType=_ptype, vType=_vtype
+                    )
                     if not sumoutils.is_valid_route(
-                            mode, route, self._conf['intermodalOptions']['vehicleAllowedParking']):
+                        mode,
+                        route,
+                        self._conf["intermodalOptions"]["vehicleAllowedParking"],
+                    ):
                         route = None
                         self.logger.debug(
-                            '_stages_define_main_locations: findIntermodalRoute mode unusable.')
+                            "_stages_define_main_locations: findIntermodalRoute mode unusable."
+                        )
                 except TraCIException:
-                    self.logger.debug('_stages_define_main_locations: findIntermodalRoute FAILED.')
+                    self.logger.debug(
+                        "_stages_define_main_locations: findIntermodalRoute FAILED."
+                    )
                     route = None
             else:
-                self.logger.debug('_stages_define_main_locations: unusable pair of edges.')
+                self.logger.debug(
+                    "_stages_define_main_locations: unusable pair of edges."
+                )
         if route:
             return from_edge, to_edge
         raise sagaexceptions.TripGenerationActivityError(
-            'Locations for the main activities not found between {} and {} using {}.'.format(
-                from_area, to_area, mode))
+            "Locations for the main activities not found between {} and {} using {}.".format(
+                from_area, to_area, mode
+            )
+        )
 
     def _stages_define_secondary_locations(self, person_stages, home, primary):
-        """ Define secondary activity locations. """
+        """Define secondary activity locations."""
         for pos, stage in person_stages.items():
-            if  'S-' in stage.activity:
+            if "S-" in stage.activity:
                 ## look for what is coming before
                 _prec = None
                 _pos = pos - 1
                 while not _prec and _pos in person_stages:
-                    if 'Home' in person_stages[_pos].activity:
-                        _prec = 'H'
-                    elif 'P-' in person_stages[_pos].activity:
-                        _prec = 'P'
+                    if "Home" in person_stages[_pos].activity:
+                        _prec = "H"
+                    elif "P-" in person_stages[_pos].activity:
+                        _prec = "P"
                     _pos -= 1
 
                 ## look for what is coming next
                 _succ = None
                 _pos = pos + 1
                 while not _succ and _pos in person_stages:
-                    if 'Home' in person_stages[_pos].activity:
-                        _succ = 'H'
-                    elif 'P-' in person_stages[_pos].activity:
-                        _succ = 'P'
+                    if "Home" in person_stages[_pos].activity:
+                        _succ = "H"
+                    elif "P-" in person_stages[_pos].activity:
+                        _succ = "P"
                     _pos += 1
 
                 destination = None
-                if _prec == 'H' and _succ == 'H':
-                    destination = self._random_location_circle(center=home, other=primary)
-                elif _prec == 'P' and _succ == 'P':
-                    destination = self._random_location_circle(center=primary, other=home)
+                if _prec == "H" and _succ == "H":
+                    destination = self._random_location_circle(
+                        center=home, other=primary
+                    )
+                elif _prec == "P" and _succ == "P":
+                    destination = self._random_location_circle(
+                        center=primary, other=home
+                    )
                 elif _prec != _succ:
                     destination = self._random_location_ellipse(home, primary)
                 else:
                     raise sagaexceptions.TripGenerationActivityError(
-                        'Invalid sequence in the activity chain: {} --> {}'.format(_prec, _succ),
-                        person_stages)
+                        "Invalid sequence in the activity chain: {} --> {}".format(
+                            _prec, _succ
+                        ),
+                        person_stages,
+                    )
 
                 person_stages[pos] = stage._replace(toEdge=destination)
         return person_stages
 
     def _random_location_circle(self, center, other):
-        """ Return a random edge in within a radius (*) from the given center.
+        """Return a random edge in within a radius (*) from the given center.
 
-            (*) Uses the ellipses defined by the foci center and other,
-                and the major axe of 1.30 * distance between the foci.
+        (*) Uses the ellipses defined by the foci center and other,
+            and the major axe of 1.30 * distance between the foci.
         """
         try:
             length = self._get_cached_dist(center, other)
         except TraCIException:
             raise sagaexceptions.TripGenerationActivityError(
-                'No route between {} and {}'.format(center, other))
+                "No route between {} and {}".format(center, other)
+            )
         major_axe = length * 1.3
         minor_axe = numpy.sqrt(numpy.square(major_axe) - numpy.square(length))
         radius = minor_axe / 2.0
 
-        self.logger.debug('_random_location_circle: %s [%.2f]', center, radius)
+        self.logger.debug("_random_location_circle: %s [%.2f]", center, radius)
         edges = self._env.get_all_neigh_edges(center, radius)
         if not edges:
             raise sagaexceptions.TripGenerationActivityError(
-                'No edges from {} with range {}.'.format(center, length))
+                "No edges from {} with range {}.".format(center, length)
+            )
 
         ret = self._random_generator.choice(edges)
         edges.remove(ret)
         allowed = (
-            self._env.sumo_network.getEdge(ret).allows('pedestrian') and
-            self._env.sumo_network.getEdge(ret).allows('passenger') and
-            ret != center and ret != other and
-            self._env.sumo_network.getEdge(ret).getLength() > self._conf['minEdgeAllowed'])
+            self._env.sumo_network.getEdge(ret).allows("pedestrian")
+            and self._env.sumo_network.getEdge(ret).allows("passenger")
+            and ret != center
+            and ret != other
+            and self._env.sumo_network.getEdge(ret).getLength()
+            > self._conf["minEdgeAllowed"]
+        )
         while edges and not allowed:
             ret = self._random_generator.choice(edges)
             edges.remove(ret)
             allowed = (
-                self._env.sumo_network.getEdge(ret).allows('pedestrian') and
-                self._env.sumo_network.getEdge(ret).allows('passenger') and
-                ret != center and ret != other and
-                self._env.sumo_network.getEdge(ret).getLength() > self._conf['minEdgeAllowed'])
+                self._env.sumo_network.getEdge(ret).allows("pedestrian")
+                and self._env.sumo_network.getEdge(ret).allows("passenger")
+                and ret != center
+                and ret != other
+                and self._env.sumo_network.getEdge(ret).getLength()
+                > self._conf["minEdgeAllowed"]
+            )
 
         if not edges:
             raise sagaexceptions.TripGenerationActivityError(
-                'No valid edges from {} with range {}.'.format(center, length))
+                "No valid edges from {} with range {}.".format(center, length)
+            )
         return ret
 
     def _random_location_ellipse(self, focus1, focus2):
-        """ Return a random edge in within the ellipse defined by the foci,
-            and the major axe of 1.30 * distance between the foci.
+        """Return a random edge in within the ellipse defined by the foci,
+        and the major axe of 1.30 * distance between the foci.
         """
         try:
             length = self._get_cached_dist(focus1, focus2)
-            self.logger.debug('_random_location_ellipse: %s --> %s [%.2f]', focus1, focus2, length)
+            self.logger.debug(
+                "_random_location_ellipse: %s --> %s [%.2f]", focus1, focus2, length
+            )
         except TraCIException:
             raise sagaexceptions.TripGenerationActivityError(
-                'No route between {} and {}'.format(focus1, focus2))
+                "No route between {} and {}".format(focus1, focus2)
+            )
 
         major_axe = length * 1.3
 
@@ -225,66 +262,99 @@ class Activities():
             if edge in (focus1, focus2):
                 continue
             allowed = (
-                self._env.sumo_network.getEdge(edge).allows('pedestrian') and
-                self._env.sumo_network.getEdge(edge).allows('passenger') and
-                self._env.sumo_network.getEdge(edge).getLength() > self._conf['minEdgeAllowed'])
+                self._env.sumo_network.getEdge(edge).allows("pedestrian")
+                and self._env.sumo_network.getEdge(edge).allows("passenger")
+                and self._env.sumo_network.getEdge(edge).getLength()
+                > self._conf["minEdgeAllowed"]
+            )
             if not allowed:
                 continue
             try:
                 first = self._get_cached_dist(focus1, edge)
                 second = self._get_cached_dist(edge, focus2)
                 if first + second <= major_axe:
-                    self.logger.debug('_random_location_ellipse: %s --> %s [%.2f]', focus1, edge, first)
                     self.logger.debug(
-                        '_random_location_ellipse: %s --> %s [%.2f]', edge, focus2, second)
+                        "_random_location_ellipse: %s --> %s [%.2f]",
+                        focus1,
+                        edge,
+                        first,
+                    )
+                    self.logger.debug(
+                        "_random_location_ellipse: %s --> %s [%.2f]",
+                        edge,
+                        focus2,
+                        second,
+                    )
                     return edge
             except TraCIException:
                 pass
 
         raise sagaexceptions.TripGenerationActivityError(
-            "No location available for _random_location_ellipse [{}, {}]".format(focus1, focus2))
+            "No location available for _random_location_ellipse [{}, {}]".format(
+                focus1, focus2
+            )
+        )
 
     # Chain
 
     def generate_person_stages(self, from_area, to_area, activity_chain, mode):
-        """ Returns the trip for the given activity chain. """
+        """Returns the trip for the given activity chain."""
 
         # Define a generic Home and Primary activity location.
-        from_edge, to_edge = self._stages_define_main_locations(from_area, to_area, mode)
+        from_edge, to_edge = self._stages_define_main_locations(
+            from_area, to_area, mode
+        )
 
         ## Generate preliminary stages for a person
         person_stages = dict()
         for pos, activity in enumerate(activity_chain):
-            if activity not in self._conf['activities']:
+            if activity not in self._conf["activities"]:
                 raise sagaexceptions.TripGenerationActivityError(
-                    'Activity {} is not define in the config file.'.format(activity))
+                    "Activity {} is not define in the config file.".format(activity)
+                )
             _start, _duration = self._get_timing_from_activity(activity)
             if pos == 0:
-                if activity != 'Home':
+                if activity != "Home":
                     raise sagaexceptions.TripGenerationActivityError(
-                        "Every activity chain MUST start with 'Home', '{}' given.".format(activity))
+                        "Every activity chain MUST start with 'Home', '{}' given.".format(
+                            activity
+                        )
+                    )
                 ## Beginning
                 person_stages[pos] = self.Activity(
-                    activity=activity, fromEdge=from_edge, start=_start, duration=_duration)
-            elif 'P-' in activity:
+                    activity=activity,
+                    fromEdge=from_edge,
+                    start=_start,
+                    duration=_duration,
+                )
+            elif "P-" in activity:
                 ## This is a primary activity
                 person_stages[pos] = self.Activity(
-                    activity=activity, toEdge=to_edge, start=_start, duration=_duration)
-            elif 'S-' in activity:
+                    activity=activity, toEdge=to_edge, start=_start, duration=_duration
+                )
+            elif "S-" in activity:
                 ## This is a secondary activity
                 person_stages[pos] = self.Activity(
-                    activity=activity, start=_start, duration=_duration)
-            elif activity == 'Home':
+                    activity=activity, start=_start, duration=_duration
+                )
+            elif activity == "Home":
                 ## End of the activity chain.
                 person_stages[pos] = self.Activity(
-                    activity=activity, toEdge=from_edge, start=_start, duration=_duration)
+                    activity=activity,
+                    toEdge=from_edge,
+                    start=_start,
+                    duration=_duration,
+                )
 
         if len(person_stages) <= 2:
             raise sagaexceptions.TripGenerationActivityError(
-                "Invalid activity chain. (Minimal: H -> P-? -> H)", activity_chain)
+                "Invalid activity chain. (Minimal: H -> P-? -> H)", activity_chain
+            )
 
         ## Define secondary activity location
-        person_stages = self._stages_define_secondary_locations(person_stages, from_edge, to_edge)
+        person_stages = self._stages_define_secondary_locations(
+            person_stages, from_edge, to_edge
+        )
 
         ## Remove the initial 'Home' stage and update the from of the second stage.
         person_stages[1] = person_stages[1]._replace(fromEdge=person_stages[0].fromEdge)
@@ -295,7 +365,9 @@ class Activities():
         ## Fixing the 'from' field with a forward chain
         pos = 2
         while pos in person_stages:
-            person_stages[pos] = person_stages[pos]._replace(fromEdge=person_stages[pos-1].toEdge)
+            person_stages[pos] = person_stages[pos]._replace(
+                fromEdge=person_stages[pos - 1].toEdge
+            )
             pos += 1
 
         ## Compute the real starting time for the activity chain based on ETT and durations
@@ -311,8 +383,9 @@ class Activities():
         while pos in person_stages:
             if person_stages[pos].fromEdge != last_edge:
                 raise sagaexceptions.TripGenerationActivityError(
-                    'Inconsistency in the locations for the chain of activities.',
-                    person_stages)
+                    "Inconsistency in the locations for the chain of activities.",
+                    person_stages,
+                )
             last_edge = person_stages[pos].toEdge
             pos += 1
 
@@ -321,16 +394,17 @@ class Activities():
         while pos in person_stages:
             person_stages[pos] = person_stages[pos]._replace(final=False)
             pos += 1
-        person_stages[pos-1] = person_stages[pos-1]._replace(final=True)
+        person_stages[pos - 1] = person_stages[pos - 1]._replace(final=True)
 
         return person_stages
 
     def _stages_compute_start_time(self, person_stages, mode):
-        """ Compute the real starting time for the activity chain. """
+        """Compute the real starting time for the activity chain."""
 
         ## Mode split:
         _mode, _ptype, _vtype = sumoutils.get_intermodal_mode_parameters(
-            mode, self._conf['intermodalOptions']['vehicleAllowedParking'])
+            mode, self._conf["intermodalOptions"]["vehicleAllowedParking"]
+        )
 
         # Find the first 'start' defined.
         pos = 1
@@ -344,34 +418,42 @@ class Activities():
             ett, route = None, None
             try:
                 route = self._sumo.simulation.findIntermodalRoute(
-                    person_stages[pos].fromEdge, person_stages[pos].toEdge,
-                    modes=_mode, pType=_ptype, vType=_vtype)
+                    person_stages[pos].fromEdge,
+                    person_stages[pos].toEdge,
+                    modes=_mode,
+                    pType=_ptype,
+                    vType=_vtype,
+                )
                 ett = sumoutils.ett_from_route(route)
             except TraCIException:
                 raise sagaexceptions.TripGenerationRouteError(
-                    'No solution foud for stage {} and modes {}.'.format(
-                        pformat(person_stages[pos]), mode))
-            if pos-1 in person_stages:
-                if person_stages[pos-1].duration:
-                    ett += person_stages[pos-1].duration
+                    "No solution foud for stage {} and modes {}.".format(
+                        pformat(person_stages[pos]), mode
+                    )
+                )
+            if pos - 1 in person_stages:
+                if person_stages[pos - 1].duration:
+                    ett += person_stages[pos - 1].duration
             start -= ett
             pos -= 1
         return start
 
     def _get_timing_from_activity(self, activity):
-        """ Compute start and duration from the activity defined in the config file. """
+        """Compute start and duration from the activity defined in the config file."""
         start = None
-        if self._conf['activities'][activity]['start']:
+        if self._conf["activities"][activity]["start"]:
             start = self._random_generator.normal(
-                loc=self._conf['activities'][activity]['start']['m'],
-                scale=self._conf['activities'][activity]['start']['s'])
+                loc=self._conf["activities"][activity]["start"]["m"],
+                scale=self._conf["activities"][activity]["start"]["s"],
+            )
             if start < 0:
                 return self._get_timing_from_activity(activity)
         duration = None
-        if self._conf['activities'][activity]['duration']:
+        if self._conf["activities"][activity]["duration"]:
             duration = self._random_generator.normal(
-                loc=self._conf['activities'][activity]['duration']['m'],
-                scale=self._conf['activities'][activity]['duration']['s'])
+                loc=self._conf["activities"][activity]["duration"]["m"],
+                scale=self._conf["activities"][activity]["duration"]["s"],
+            )
             if duration <= 0:
                 return self._get_timing_from_activity(activity)
         return start, duration
