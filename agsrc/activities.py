@@ -82,7 +82,7 @@ class Activities:
 
         return person_stages
 
-    def _stages_define_main_locations(self, from_area, to_area, mode):
+    def _stages_define_main_locations(self, from_area, to_area, mode, estimated_start):
         """Define a generic Home and Primary activity location.
         The locations must be reachable in some ways.
         """
@@ -114,7 +114,12 @@ class Activities:
             if self._env.valid_pair(from_edge, to_edge) and from_allowed and to_allowed:
                 try:
                     route = self._sumo.simulation.findIntermodalRoute(
-                        from_edge, to_edge, modes=_mode, pType=_ptype, vType=_vtype
+                        from_edge,
+                        to_edge,
+                        depart=estimated_start,
+                        modes=_mode,
+                        pType=_ptype,
+                        vType=_vtype,
                     )
                     if not sumoutils.is_valid_route(
                         mode,
@@ -297,12 +302,32 @@ class Activities:
 
     # Chain
 
+    def _get_estimated_activity_time_from_chain(self, activity_chain):
+        """Returns the first usable time for any given chain."""
+        estimated_start_time = None
+        for activity in activity_chain:
+            estimated_start_time, _ = self._get_timing_from_activity(activity)
+            if estimated_start_time:
+                return estimated_start_time
+        # this can happen only in a chain that is malformed,
+        # conaining only Home and S- activities.
+        raise sagaexceptions.TripGenerationActivityError(
+            f"Missing Primary (P-) activity in the chain {activity_chain}"
+        )
+
     def generate_person_stages(self, from_area, to_area, activity_chain, mode):
         """Returns the trip for the given activity chain."""
 
+        # this estimated start time is going to be used as a tentative departure time
+        # for the intermodal routes, it's higly unreliable, but necessary to generate
+        # routes with public transports.
+        estimated_start_time = self._get_estimated_activity_time_from_chain(
+            activity_chain
+        )
+
         # Define a generic Home and Primary activity location.
         from_edge, to_edge = self._stages_define_main_locations(
-            from_area, to_area, mode
+            from_area, to_area, mode, estimated_start_time
         )
 
         ## Generate preliminary stages for a person
@@ -420,6 +445,7 @@ class Activities:
                 route = self._sumo.simulation.findIntermodalRoute(
                     person_stages[pos].fromEdge,
                     person_stages[pos].toEdge,
+                    depart=start,
                     modes=_mode,
                     pType=_ptype,
                     vType=_vtype,
