@@ -1,0 +1,37 @@
+name: linting-linux
+
+on:
+  push:            # run on push events
+    paths-ignore:  # but ignore everything in the docs subfolder
+      - 'docs/**'
+    branches:
+      - '**'
+    tags:
+      - '*'
+  pull_request:    # run on pull requests
+    paths-ignore:  # but ignore everything in the docs subfolder
+      - 'docs/**'
+
+jobs:
+  Wildau:
+    runs-on: Ubuntu-22.04
+
+    steps:
+    - name: Cloning SAGA
+      uses: actions/checkout@v2
+
+    - name: Installing SAGA Requirements
+      run: |
+        sudo pip3 install --no-cache-dir -r requirements.txt
+
+    - name: Installing Testing & Development Requirements
+      run: |
+        sudo pip3 install --no-cache-dir -r requirements_dev.txt
+
+    - name: Run Black, ISort and PyLint
+      run: |
+        bash test_linting.sh
+    
+    - name: Run PyTest
+      run: |
+        bash pytest.sh

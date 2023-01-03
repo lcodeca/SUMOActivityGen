@@ -1,4 +1,4 @@
-name: windows-pypi
+name: integration-windows-pypi
 
 on:
   push:            # run on push events

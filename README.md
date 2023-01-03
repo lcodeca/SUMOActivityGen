@@ -25,10 +25,22 @@ In case of failure, click on the Github Actions to check which of the different 
 * The complete generation of a scenario from OSM can be done using `python3 scenarioFromOSM.py --osm {osm file} --out {output directory}`. All the generated files are going to be in the output directory.
 * Alternatively, it can be tested and explored using the configuration files provided by [MoSTScenario](https://github.com/lcodeca/MoSTScenario) and in the `example` directory, starting from `bash most.generator.sh`.
 
-The documentation is availalbe in the `docs` folder.
+The documentation is available in the `docs` folder.
 
 ## Development
 
+You can have a buildenv to run all the tests in a container. It requires Docker and docker-compose installed.
+
+With
+```bash
+docker-compose run --rm buildenv
+```
+you are going to have a shell in the docker that can be used to run all the scripts and tests.
+
+In case you change the Dockerfile itself, remember to rebuild it with `docker-compose build --no-cache` before running it.
+It's always useful to `docker-compose down` once you exit the `bash` shell.
+
+### Install SAGA in developer mode
 With 
 ``` bash
 cd saga
@@ -36,9 +48,15 @@ python3 -m pip install -e .
 ```
 it is possible to install SAGA in development mode, allowing you to change the source code while keeping the package up to date.
 
-The same tests that are running with the Github Actions can be run locally with:
+### Linting 
+The same scripts that are running with the Github Actions can be run locally with:
 ```bash
 bash linting.sh
+```
+
+### Unit & Integration Testing
+The same scripts that are running with the Github Actions can be run locally with:
+```bash
 bash pytest.sh
 bash runTestScenarios.sh
 ```
