@@ -9,10 +9,10 @@
     http://www.eclipse.org/legal/epl-2.0.
 """
 
-import logging
 import json
-from pprint import pformat
+import logging
 import sys
+from pprint import pformat
 
 LOGGER = logging.getLogger("ActivityGen")
 

@@ -11,8 +11,8 @@
 
 import collections
 import os
-from pprint import pformat
 import sys
+from pprint import pformat
 
 import numpy
 from numpy.random import RandomState

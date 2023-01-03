@@ -17,21 +17,20 @@ import pstats
 import shutil
 import subprocess
 import sys
-
 from xml.etree import ElementTree
 
-import generateParkingAreasFromOSM
-import generateTAZBuildingsFromOSM
-import generateTaxiStandsFromOSM
 import generateAmitranFromTAZWeights
 import generateDefaultsActivityGen
+import generateParkingAreasFromOSM
+import generateTaxiStandsFromOSM
+import generateTAZBuildingsFromOSM
 import sagaActivityGen
 import sagaActivityReport
 
 if "SUMO_HOME" in os.environ:
     sys.path.append(os.path.join(os.environ["SUMO_HOME"], "tools"))
-    import ptlines2flows
     import generateParkingAreaRerouters
+    import ptlines2flows
     from visualization import plot_summary
 else:
     sys.exit("please declare environment variable 'SUMO_HOME'")

@@ -12,14 +12,12 @@
 import csv
 import multiprocessing
 import os
-from random import choice
 import sys
 import xml.etree.ElementTree
+from random import choice
 
 import numpy
-
 from shapely import geometry
-
 from tqdm import tqdm
 
 if "SUMO_HOME" in os.environ:

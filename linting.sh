@@ -14,5 +14,8 @@ set -e
 # Linting everything
 black .
 
+# Reordering the imports
+isort .
+
 # Lint for all the python files
 pylint --rcfile=.pylintrc $(find . -name '*.py')
