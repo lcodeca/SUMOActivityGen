@@ -1,0 +1,12 @@
+version: '3.4'
+
+services:
+  buildenv:
+    image: buildenv
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    volumes:
+    - ./:/repo
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t

@@ -1,0 +1,33 @@
+# For more information, please refer to https://aka.ms/vscode-docker-python
+FROM ubuntu:22.04
+
+# Keeps Python from generating .pyc files in the container
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Turns off buffering for easier container logging
+ENV PYTHONUNBUFFERED=1
+
+# Install SUMO
+RUN apt update && apt --yes install software-properties-common && apt update
+RUN add-apt-repository ppa:sumo/stable && apt update
+RUN apt --yes install sumo sumo-tools
+
+# Install Python3 & pip
+RUN apt --yes install python3.10 python3-pip
+
+# Install pip requirements for SAGA
+COPY requirements.txt .
+RUN python3 -m pip install -r requirements.txt
+
+# Install pip requirements for Devel & Testing
+COPY requirements_dev.txt .
+RUN python3 -m pip install -r requirements_dev.txt
+
+WORKDIR /repo
+
+# Creates a non-root user with an explicit UID and adds permission to access the /repo folder
+# For more info, please refer to https://aka.ms/vscode-docker-python-configure-containers
+RUN adduser -u 5678 --disabled-password --gecos "" developer && chown -R developer /repo
+USER developer
+
+CMD ["bash"]
