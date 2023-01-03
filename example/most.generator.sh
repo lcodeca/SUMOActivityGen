@@ -31,8 +31,9 @@ mkdir -p "$OUTPUT"
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ PUBLIC TRANSPORTS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ##
 
 echo "[$(date)] --> Generate bus trips..."
-python "$SUMO_TOOLS/ptlines2flows.py" -n "$SCENARIO/out/most.net.xml" -b 0 -e 86400 -p 900 \
-    --random-begin --seed 42 --no-vtypes \
+python3 "$SUMO_HOME/tools/ptlines2flows.py" \
+    -n "$SCENARIO/out/most.net.xml" \
+    -e 86400 -p 900 --random-begin --seed 42 --no-vtypes --ignore-errors \
     --ptstops "$SCENARIO/out/most.busstops.add.xml" \
     --ptlines "$SCENARIO/out/most.buslines.add.xml" \
     -o "$OUTPUT/most.example.buses.flows.xml"
@@ -40,8 +41,9 @@ python "$SUMO_TOOLS/ptlines2flows.py" -n "$SCENARIO/out/most.net.xml" -b 0 -e 86
 sed -e s/:0//g -i'' "$OUTPUT/most.example.buses.flows.xml"
 
 echo "[$(date)] --> Generate train trips..."
-python "$SUMO_TOOLS/ptlines2flows.py" -n "$SCENARIO/out/most.net.xml" -b 0 -e 86400 -p 1200 \
-    -d 300 --random-begin --seed 42 --no-vtypes \
+python3 "$SUMO_HOME/tools/ptlines2flows.py" \
+    -n "$SCENARIO/out/most.net.xml" \
+    -e 86400 -p 1200 -d 300 --random-begin --seed 42 --no-vtypes --ignore-errors \
     --ptstops "$SCENARIO/out/most.trainstops.add.xml" \
     --ptlines "$SCENARIO/out/most.trainlines.add.xml" \
     -o "$OUTPUT/most.example.trains.flows.xml"

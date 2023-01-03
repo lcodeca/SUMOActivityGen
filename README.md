@@ -29,3 +29,6 @@ The documentation is availalbe in the `docs` folder.
 
 * _Release v0.2 is compatible with SUMO 1.4.0_
 * _Release v0.1 is compatible with SUMO 1.2.0_
+
+## Linting
+For linting, use the `linting.sh` script. 
