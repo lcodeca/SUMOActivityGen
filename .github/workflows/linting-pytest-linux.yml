@@ -13,12 +13,18 @@ on:
       - 'docs/**'
 
 jobs:
-  Wildau:
+  linting-and-testing:
     runs-on: Ubuntu-22.04
 
     steps:
     - name: Cloning SAGA
       uses: actions/checkout@v2
+
+    - name: Installing SUMO
+      run: |
+        sudo add-apt-repository ppa:sumo/stable
+        sudo apt-get update
+        sudo apt-get install sumo sumo-tools
 
     - name: Installing SAGA Requirements
       run: |
@@ -34,4 +40,5 @@ jobs:
     
     - name: Run PyTest
       run: |
+        export SUMO_HOME='/usr/share/sumo'
         bash pytest.sh
