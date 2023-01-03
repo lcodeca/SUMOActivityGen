@@ -8,7 +8,7 @@ To use this software the following Python 3 libraries are required:
 
 * `pip3 install tqdm pyproj numpy shapely matplotlib rtree folium`
 
-To use `rtree`, `libspatialindex-dev` is required to be installed.
+To use `rtree`, `libspatialindex-dev` (linux) or `spatialindex` (macOS) is required to be installed.
 
 ### Eclipse SUMO
 

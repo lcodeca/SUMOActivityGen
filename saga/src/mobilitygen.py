@@ -11,17 +11,15 @@
 
 import collections
 import cProfile
-
 import io
 import json
 import logging
 import os
-from pprint import pformat
 import pstats
 import sys
 import xml.etree.ElementTree
-
 from enum import Enum
+from pprint import pformat
 
 import numpy
 from numpy.random import RandomState

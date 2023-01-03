@@ -29,6 +29,7 @@ setup(
         "pyproj",
         "pytest",
         "pytest-cov",
+        "pytest-mock",
         "rtree",
         "shapely",
         "tqdm",

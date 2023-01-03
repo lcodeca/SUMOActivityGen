@@ -14,8 +14,8 @@ import json
 import os
 from pprint import pformat
 
-from lxml import etree
 import numpy as np
+from lxml import etree
 
 
 class SAGAReport:

@@ -12,6 +12,7 @@
 import os
 import sys
 import xml.etree.ElementTree
+
 from tqdm import tqdm
 
 if "SUMO_HOME" in os.environ:

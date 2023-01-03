@@ -1,6 +1,6 @@
-# SUMOActivityGen
+# SAGA - SUMOActivityGen
 
-Activity-based Mobility Generation for SUMO Simulator
+## Activity-based Mobility Generation for SUMO Simulator
 
 Contacts: Lara CODECA [lara.codeca@gmail.com]
 
@@ -14,9 +14,11 @@ This Source Code may also be made available under the following Secondary Licens
 
 ## Status
 
-Weekly update against the SUMO master branch.
+Weekly check against the SUMO master branch and latest SUMO release.
 
 [![linux-master](https://github.com/lcodeca/SUMOActivityGen/actions/workflows/linux-master.yml/badge.svg)](https://github.com/lcodeca/SUMOActivityGen/actions/workflows/linux-master.yml) [![linux-release](https://github.com/lcodeca/SUMOActivityGen/actions/workflows/linux-release.yml/badge.svg)](https://github.com/lcodeca/SUMOActivityGen/actions/workflows/linux-release.yml) [![windows-pypi](https://github.com/lcodeca/SUMOActivityGen/actions/workflows/windows-pypi.yml/badge.svg)](https://github.com/lcodeca/SUMOActivityGen/actions/workflows/windows-pypi.yml)
+
+In case of failure, click on the Github Actions to check which of the different test scenarios are failing.
 
 ## Overview
 
@@ -25,10 +27,27 @@ Weekly update against the SUMO master branch.
 
 The documentation is availalbe in the `docs` folder.
 
-### Due to some changes in the SUMO development version of the TraCI APIs, the master branch may not compatible with SUMO 1.4.0
+## Development
+
+With 
+``` bash
+cd saga
+python3 -m pip install -e . 
+```
+it is possible to install SAGA in development mode, allowing you to change the source code while keeping the package up to date.
+
+The same tests that are running with the Github Actions can be run locally with:
+```bash
+bash linting.sh
+bash pytest.sh
+bash runTestScenarios.sh
+```
+
+### Due to some changes in the SUMO development version of the TraCI APIs, the master branch may not compatible with older versions of SUMO.
 
 * _Release v0.2 is compatible with SUMO 1.4.0_
 * _Release v0.1 is compatible with SUMO 1.2.0_
 
-## Linting
-For linting, use the `linting.sh` script. 
+## Contributing
+
+The project is open to anyone interested.

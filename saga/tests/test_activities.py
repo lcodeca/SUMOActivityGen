@@ -9,7 +9,6 @@ http://www.eclipse.org/legal/epl-2.0.
 """
 
 import pytest
-
 from saga.src import activities
 
 

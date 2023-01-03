@@ -8,7 +8,7 @@ To use this software the following Python 3 libraries are required:
 
 * `pip3 install tqdm pyproj numpy shapely matplotlib rtree folium`
 
-To use `rtree`, `libspatialindex-dev` is required to be installed.
+To use `rtree`, `libspatialindex-dev` (linux) or `spatialindex` (macOS) is required to be installed.
 
 ### Eclipse SUMO
 
@@ -23,6 +23,8 @@ Documentation in [docs/ScenarioGeneration.md](ScenarioGeneration.md).
 Optional parameters:
 
 ```
+  optional arguments:
+  -h, --help            show this help message and exit
   --osm OSM_FILE        OSM file.
   --out OUT_DIR         Directory for all the output files.
   --lefthand            Generate a left-hand traffic scenario.
@@ -31,11 +33,15 @@ Optional parameters:
   --taxi-fleet TAXI_FLEET
                         Size of the taxi fleet.
   --density DENSITY     Average population density in square kilometers.
-  --single-taz          Ignore administrative boundaries and generate only one
-                        TAZ.
+  --single-taz          Ignore administrative boundaries and generate
+                        only one TAZ.
   --admin-level ADMIN_LEVEL
-                        Select only the administrative boundaries with the
-                        given level and generate the associated TAZs.
+                        Select only the administrative boundaries with
+                        the given level and generate the associated TAZs.
+  --max-entrance-dist MAX_ENTRANCE
+                        Maximum search radious to find building eetrances
+                        in edges that are in other TAZs. [Default: 1000.0
+                        meters]
   --taz-plot HTML_FILENAME
                         Plots the TAZs to an HTML file as OSM overlay.
                         (Requires folium)
@@ -43,43 +49,43 @@ Optional parameters:
                         Number of processes spawned (when suported) to
                         generate the scenario.
   --from-step FROM_STEP
-                        For successive iteration of the script, it defines
-                        from which step it should start:
-                             0 - Copy default files.
-                             1 - Run netconvert & polyconvert.
-                             2 - Run ptlines2flows.py.
-                             3 - Generate parking areas.
-                             4 - Generate parking area rerouters.
-                             5 - Generate taxi stands.
-                             6 - Generate taxi stands rerouters.
-                             7 - Extract TAZ from administrative boundaries.
-                             8 - Generate OD-matrix.
-                             9 - Generate SUMOActivityGen defaults.
-                            10 - Run SUMOActivityGen.
-                            11 - Launch SUMO.
-                            12 - Report.
-  --to-step TO_STEP     For successive iteration of the script, it defines
-                        after which step it should stop:
-                             0 - Copy default files.
-                             1 - Run netconvert & polyconvert.
-                             2 - Run ptlines2flows.py.
-                             3 - Generate parking areas.
-                             4 - Generate parking area rerouters.
-                             5 - Generate taxi stands.
-                             6 - Generate taxi stands rerouters.
-                             7 - Extract TAZ from administrative boundaries.
-                             8 - Generate OD-matrix.
-                             9 - Generate SUMOActivityGen defaults.
-                            10 - Run SUMOActivityGen.
-                            11 - Launch SUMO.
-                            12 - Report.
+                        For successive iteration of the script, it
+                        defines from which step it should start: 
+                         [ 0 - Copy default files.] 
+                         [ 1 - Run netconvert & polyconvert.] 
+                         [ 2 - Run ptlines2flows.py.] 
+                         [ 3 - Generate parking areas.] 
+                         [ 4 - Generate parking area rerouters.] 
+                         [ 5 - Generate taxi stands.] 
+                         [ 6 - Generate taxi stands rerouters.] 
+                         [ 7 - Extract TAZ from administrative boundaries.] 
+                         [ 8 - Generate OD-matrix.] 
+                         [ 9 - Generate SUMOActivityGen defaults.] 
+                         [10 - Run SUMOActivityGen.] 
+                         [11 - Launch SUMO.] 
+                         [12 - Report.]
+  --to-step TO_STEP     For successive iteration of the script, it
+                        defines after which step it should stop: 
+                         [ 0 - Copy default files.] 
+                         [ 1 - Run netconvert & polyconvert.] 
+                         [ 2 - Run ptlines2flows.py.] 
+                         [ 3 - Generate parking areas.] 
+                         [ 4 - Generate parking area rerouters.] 
+                         [ 5 - Generate taxi stands.] 
+                         [ 6 - Generate taxi stands rerouters.] 
+                         [ 7 - Extract TAZ from administrative boundaries.] 
+                         [ 8 - Generate OD-matrix.] 
+                         [ 9 - Generate SUMOActivityGen defaults.] 
+                         [10 - Run SUMOActivityGen.] 
+                         [11 - Launch SUMO.] 
+                         [12 - Report.]
   --profiling           Enable Python3 cProfile feature.
   --no-profiling        Disable Python3 cProfile feature.
   --gui                 Enable SUMO GUI
   --no-gui              Disable SUMO GUI
-  --local-defaults      Uses the default folder and files defined locally. If
-                        not enabled, uses the files contained in the
-                        sumo/tools/contributed/saga folder.
+  --local-defaults      Uses the default folder and files defined
+                        locally. If not enabled, uses the files contained
+                        in the sumo/tools/contributed/saga folder.
 ```
 
 ## The SUMOActivityGen mobility generator

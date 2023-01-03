@@ -12,9 +12,9 @@
 import collections
 import csv
 import os
-from pprint import pformat
 import sys
 import xml.etree.ElementTree
+from pprint import pformat
 
 from numpy.random import RandomState
 
