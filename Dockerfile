@@ -7,13 +7,19 @@ ENV PYTHONDONTWRITEBYTECODE=1
 # Turns off buffering for easier container logging
 ENV PYTHONUNBUFFERED=1
 
-# Install SUMO
+# Setup Environment and Install SUMO 
 RUN apt update && apt --yes install software-properties-common && apt update
+# these are the same SUMO dependencies for the Github Action
+RUN apt --yes install cmake libeigen3-dev libxerces-c-dev libfox-1.6-dev libgdal-dev libproj-dev libgtest-dev libgoogle-perftools-dev libgl2ps-dev python3-dev python3-setuptools swig openjdk-8-jdk maven ccache
+# actual sumo installation
 RUN add-apt-repository ppa:sumo/stable && apt update
 RUN apt --yes install sumo sumo-tools
 
-# Install Python3 & pip
-RUN apt --yes install python3.10 python3-pip
+# Install Python3 pip
+RUN apt --yes install python3-pip
+
+# Install apt requirements for SAGA
+RUN apt --yes install python3-rtree libspatialindex-dev
 
 # Install pip requirements for SAGA
 COPY requirements.txt .
