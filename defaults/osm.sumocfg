@@ -10,7 +10,7 @@
     http://www.eclipse.org/legal/epl-2.0.
 -->
 
-<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
 
     <input>
         <net-file value="osm.net.xml"/>
@@ -105,4 +105,4 @@
         <gui-settings-file value="default-gui.xml"/>
     </gui_only>
 
-</configuration>
+</sumoConfiguration>
