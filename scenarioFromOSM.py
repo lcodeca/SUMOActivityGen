@@ -241,6 +241,7 @@ DEAFULT_SPECIFIC_AG_CONG = "osm_activitygen.json"
 DEFAULT_SUMOCFG = "osm.sumocfg"
 DEFAULT_TRIPINFO_FILE = "output.tripinfo.xml"
 DEFAULT_SUMMARY_FILE = "output.summary.xml"
+DEFAULT_PERSON_SUMMARY_FILE = "output.person.summary.xml"
 
 ## SAGA Report
 DEFAULT_REPORT_FILE = "activities_report.json"
@@ -499,13 +500,20 @@ def _call_saga_activity_report():
     sagaActivityReport.main(report_options)
 
 
-def _call_plot_summary():
+def _call_plot_summary(summaryFileName, outputName,isPedestrian=False):
     """Call directly plot_summary from sumo/tools"""
+    if isPedestrian:
+        yValue = "walking"
+    else:
+        yValue = "running"
+
     plot_options = [
         "-i",
-        DEFAULT_SUMMARY_FILE,
+        summaryFileName,
         "-o",
-        "summary.png",
+        outputName,
+        "-m",
+        yValue,
         "--xtime1",
         "--verbose",
         "--blind",
@@ -654,7 +662,8 @@ def main(cmd_args):
     if args.from_step <= 12 and args.to_step >= 12:
         print("Report.")
         _call_saga_activity_report()
-        _call_plot_summary()
+        _call_plot_summary(DEFAULT_SUMMARY_FILE, "summary.png")
+        _call_plot_summary(DEFAULT_PERSON_SUMMARY_FILE, "personSummary.png", True)
 
     ## ========================              PROFILER              ======================== ##
     if args.profiling:
