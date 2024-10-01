@@ -20,10 +20,10 @@ jobs:
 
     steps:
     - name: Cloning SAGA
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Cloning SUMO
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         repository: eclipse/sumo
         path: sumo
@@ -65,7 +65,7 @@ jobs:
 
     - name: Upload Wildau Test
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
           name: Wildau
           path: |
@@ -122,7 +122,7 @@ jobs:
 
     - name: Upload DLR Test
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
           name: DLR
           path: |
@@ -134,10 +134,10 @@ jobs:
 
     steps:
     - name: Cloning SAGA
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Cloning SUMO
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         repository: eclipse/sumo
         path: sumo
@@ -179,7 +179,7 @@ jobs:
 
     - name: Upload Docklands Test
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
           name: Docklands
           path: |
@@ -191,10 +191,10 @@ jobs:
 
     steps:
     - name: Cloning SAGA
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Cloning SUMO
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         repository: eclipse/sumo
         path: sumo
@@ -236,7 +236,7 @@ jobs:
 
     - name: Upload Sophia Test
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
           name: Sophia
           path: |
@@ -248,10 +248,10 @@ jobs:
 
     steps:
     - name: Cloning SAGA
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Cloning SUMO
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         repository: eclipse/sumo
         path: sumo
@@ -293,7 +293,7 @@ jobs:
 
     - name: Upload Riyadh Test
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
           name: Riyadh
           path: |
@@ -350,7 +350,7 @@ jobs:
 
     - name: Upload Kyoto Test
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
           name: Kyoto
           path: |
