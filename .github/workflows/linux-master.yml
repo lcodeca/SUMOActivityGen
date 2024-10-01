@@ -77,10 +77,10 @@ jobs:
 
     steps:
     - name: Cloning SAGA
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Cloning SUMO
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         repository: eclipse/sumo
         path: sumo
@@ -305,10 +305,10 @@ jobs:
 
     steps:
     - name: Cloning SAGA
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Cloning SUMO
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         repository: eclipse/sumo
         path: sumo
