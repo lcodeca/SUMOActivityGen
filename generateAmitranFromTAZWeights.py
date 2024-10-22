@@ -76,8 +76,9 @@ class AmitranFromTAZWeightsGenerator:
         _single_taz = len(self._taz_weights) == 1
         for origin, taz_orig in self._taz_weights.items():
             for destination, _ in self._taz_weights.items():
-                if origin == destination and not _single_taz:
-                    continue
+                # Commenting this 'if' allows origin an destination on the same TAZ
+                #if origin == destination and not _single_taz:
+                #    continue
                 amount = round(
                     self._options.density
                     * taz_orig["Area"]
