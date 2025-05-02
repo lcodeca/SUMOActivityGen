@@ -16,7 +16,7 @@ on:
 
 jobs:
   Wildau:
-    runs-on: Ubuntu-20.04
+    runs-on: ubuntu-latest
 
     steps:
     - name: Cloning SAGA
