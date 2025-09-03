@@ -44,8 +44,6 @@
 
         <junctions.join value="true"/>
         <junctions.join-dist value="10"/>
-        <junctions.join-exclude value=""/>
-        <junctions.join-same value="true"/>
 
         <junctions.corner-detail value="5"/>
         <junctions.internal-link-detail value="5"/>
